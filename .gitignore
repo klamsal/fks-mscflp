@@ -9,6 +9,8 @@ __pycache__/
 # Local-only project data
 Literature/
 benchmarks/
+cflp_instances_objectives_General Corridor.csv
+tprs_a_1636320_sm2925.doc
 
 # FKS paper build outputs
 fks_paper/*.aux

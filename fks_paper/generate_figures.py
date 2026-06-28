@@ -212,7 +212,7 @@ def fig_gap_scatter():
                        [p["gap"]  for p in pts],
                        c=MC5_COLOR, marker=fam_marker[fam],
                        s=30, alpha=0.75, linewidths=0,
-                       label=f"MC  {label}" if fam == FAMILIES[0] else "_")
+                       label=f"FKS  {label}" if fam == FAMILIES[0] else "_")
 
     # Legend: method patches + family markers
     legend_patches = [
@@ -236,7 +236,7 @@ def fig_gap_scatter():
     fig.tight_layout()
     fig.savefig(FIG_DIR / "gap_scatter.pdf", bbox_inches="tight")
     plt.close(fig)
-    print(f"  Saved  KS pts={len(ks_rows)}  MC pts={len(mc_rows)}")
+    print(f"  Saved  KS pts={len(ks_rows)}  FKS pts={len(mc_rows)}")
 
 
 # ── Figure 3: Gap Box Plots ────────────────────────────────────────────────────
@@ -393,7 +393,7 @@ def fig_edge_comparison():
     ax.bar(x + width, [mc5_edges.get(f, 0) for f in plot_fams],
             width, color=MC5_COLOR, alpha=0.75, label="FKS $k=5$", zorder=2)
 
-    # Annotate exact values on MC bars
+    # Annotate exact values on FKS bars
     for i, fam in enumerate(plot_fams):
         n_cli = client_counts[fam]
         ax.text(i,         mc3_edges.get(fam, 0) + 200,
