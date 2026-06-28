@@ -9,11 +9,13 @@ arcs that KS keeps via the γ-threshold, causing tiny quality losses (< 0.06%).
 identical to KS. Stages 2 and 3 continue with adaptive incumbent edges (top-k narrowing).
 
 This gives:
+
 - Stage 1: γ-threshold (same edge set as KS) → guarantees KS-quality incumbent
 - Stage 2: adaptive incumbent edges, k=20 → narrows to promising arcs
 - Stage 3: adaptive incumbent edges, k=10 → fine refinement + warm start
 
 Benefits:
+
 - Closes quality gap on small/dense instances (300×300, 500×500)
 - Stage 1 edge set becomes adaptive (no need to tune k=50)
 - Warm-start + funnel narrowing in Stages 2/3 still provide speedup vs plain KS
@@ -52,8 +54,10 @@ Without Fix 3, the flat-k funnel would force cold restarts at every stage transi
 The natural order is therefore: prove the safety guarantee (Fix 3) first, then apply
 the aggressive narrowing design that relies on it (Fix 2).
 
-**Naming rationale (paper-side only; internal CSVs keep fks-cg):**
+**Naming rationale (paper and codebase):**
+
 The `-WS` suffix marks variants with feasibility-preserving transitions throughout:
+
 - KS-CG-WS: γ-threshold arc selection + feasibility-preserving
 - FKS-CG-WS: flat-k arc selection + feasibility-preserving (the full method)
 The `FKS` prefix marks the flat-k funnel design. Each name element maps to one fix:

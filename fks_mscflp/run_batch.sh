@@ -5,9 +5,9 @@
 #   bash run_batch.sh <testbed> <family> <mode> [milp_time] [idx_start] [idx_end]
 #
 # Examples:
-#   bash run_batch.sh a 1000-4000 fks-cg
+#   bash run_batch.sh a 1000-4000 fks-cg-ws
 #   bash run_batch.sh b 1200-3000 ks-full 300
-#   bash run_batch.sh c 1000-1000 fks-cg 300 61 90
+#   bash run_batch.sh c 1000-1000 fks-cg-ws 300 61 90
 #
 # Each instance is a fresh python process — clean memory between instances.
 # Already-completed instances are skipped automatically by solve.py.

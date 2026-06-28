@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run_all.sh — queue all 885 runs sequentially (295 instances × 3 modes).
+# run_all.sh — queue all 1180 runs sequentially (295 instances × 4 modes).
 #
 # Run this in a nohup session so it survives terminal close:
 #   nohup bash run_all.sh > logs/run_all.log 2>&1 &
@@ -15,7 +15,7 @@ MILP_TIME=300
 
 FAMILIES_A="800-4400 1000-1000 1200-3000 1000-4000 2000-2000"
 FAMILIES_B="800-4400 1000-1000 1200-3000 1000-4000 2000-2000"
-MODES="ks-full ks-cg fks-cg"
+MODES="ks-full ks-cg ks-cg-ws fks-cg-ws"
 
 for MODE in $MODES; do
     for FAMILY in $FAMILIES_A; do

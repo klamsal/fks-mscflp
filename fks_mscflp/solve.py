@@ -1,14 +1,15 @@
 """solve.py — Solve ONE instance with ONE mode, append ONE row to CSV, exit.
 
 Usage:
-    python solve.py --testbed=a --family=1000-4000 --idx=7 --mode=fks-cg
+    python solve.py --testbed=a --family=1000-4000 --idx=7 --mode=fks-cg-ws
     python solve.py --testbed=b --family=1200-3000 --idx=12 --mode=ks-full
     python solve.py --testbed=a --family=1000-1000 --idx=1 --mode=ks-cg --milp-time=300
 
 Modes:
     ks-full   Full LP  + G&K 2012 Kernel Search
     ks-cg     CG LP   + G&K 2012 Kernel Search
-    fks-cg    CG LP   + Funnel KS (k=50→20→10, warm starts)
+    ks-cg-ws  CG LP   + KS with feasibility-preserving stage transitions
+    fks-cg-ws CG LP   + Funnel KS (k=50→20→10, warm starts)
 
 Output:
     results/tb{testbed}_{family}_{mode}.csv  — one row appended per run
@@ -30,9 +31,7 @@ from loaders   import load_plc, find_instance, list_testbed
 from lp_solver import solve_lp, solve_lp_cg
 from ks        import run_ks
 from fks       import run_fks, DEFAULT_STAGES
-from fks_dr    import run_fks_dr
 from ks_ws     import run_ks_ws
-from fks_asc   import run_fks_asc, DEFAULT_ASC_STAGES
 from testa_zub import TESTA_ZUB
 
 RESULTS = Path(__file__).parent / "results"
@@ -42,19 +41,19 @@ FKS_STAGES = [(50.0, 300.0), (20.0, 300.0), (10.0, 300.0)]
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
-args     = sys.argv[1:]
-TESTBED  = next((a.split("=")[1] for a in args if a.startswith("--testbed=")), None)
-FAMILY   = next((a.split("=")[1] for a in args if a.startswith("--family=")),  None)
-IDX      = next((int(a.split("=")[1]) for a in args if a.startswith("--idx=")), None)
-MODE     = next((a.split("=")[1] for a in args if a.startswith("--mode=")),    None)
+args      = sys.argv[1:]
+TESTBED   = next((a.split("=")[1] for a in args if a.startswith("--testbed=")), None)
+FAMILY    = next((a.split("=")[1] for a in args if a.startswith("--family=")),  None)
+IDX       = next((int(a.split("=")[1]) for a in args if a.startswith("--idx=")), None)
+MODE      = next((a.split("=")[1] for a in args if a.startswith("--mode=")),    None)
 MILP_TIME = next((float(a.split("=")[1]) for a in args if a.startswith("--milp-time=")), 300.0)
 
 if not all([TESTBED, FAMILY, IDX, MODE]):
-    print("Usage: python solve.py --testbed=a --family=1000-4000 --idx=7 --mode=fks-cg")
+    print("Usage: python solve.py --testbed=a --family=1000-4000 --idx=7 --mode=fks-cg-ws")
     sys.exit(1)
 
-if MODE not in ("ks-full", "ks-cg", "ks-cg-ws", "fks-cg", "fks-cg-dr", "fks-cg-asc"):
-    print(f"Unknown mode '{MODE}'. Must be ks-full, ks-cg, ks-cg-ws, fks-cg, or fks-cg-asc.")
+if MODE not in ("ks-full", "ks-cg", "ks-cg-ws", "fks-cg-ws"):
+    print(f"Unknown mode '{MODE}'. Must be ks-full, ks-cg, ks-cg-ws, or fks-cg-ws.")
     sys.exit(1)
 
 INSTANCE_NAME = f"p{FAMILY}-{IDX}"
@@ -115,7 +114,7 @@ inst = load_plc(inst_path, INSTANCE_NAME)
 
 # ── LP solve ──────────────────────────────────────────────────────────────────
 
-use_cg = (MODE in ("ks-cg", "ks-cg-ws", "fks-cg", "fks-cg-dr", "fks-cg-asc"))
+use_cg = (MODE in ("ks-cg", "ks-cg-ws", "fks-cg-ws"))
 if use_cg:
     lp = solve_lp_cg(inst)
 else:
@@ -163,20 +162,14 @@ if MODE in ("ks-full", "ks-cg", "ks-cg-ws"):
     row["ks_n_restarts"]  = res.n_restarts
     row["ks_n_buckets"]   = res.n_buckets_used
 
-elif MODE in ("fks-cg", "fks-cg-dr", "fks-cg-asc"):
-    if MODE == "fks-cg-dr":
-        res = run_fks_dr(inst, lp, stages=FKS_STAGES)
-    elif MODE == "fks-cg-asc":
-        res = run_fks_asc(inst, lp, stages=DEFAULT_ASC_STAGES)
-    else:
-        res = run_fks(inst, lp, stages=FKS_STAGES)
+elif MODE == "fks-cg-ws":
+    res = run_fks(inst, lp, stages=FKS_STAGES)
 
     obj       = res.obj
     milp_time = res.total_time
     n_milps   = res.n_milps
 
-    actual_stages = DEFAULT_ASC_STAGES if MODE == "fks-cg-asc" else FKS_STAGES
-    for s, (mult, _) in enumerate(actual_stages, start=1):
+    for s, (mult, _) in enumerate(FKS_STAGES, start=1):
         prefix = f"fks_s{s}"
         i = s - 1
         s_obj  = res.stage_objs[i]   if res.stage_objs   and i < len(res.stage_objs)   else float("nan")
@@ -190,11 +183,6 @@ elif MODE in ("fks-cg", "fks-cg-dr", "fks-cg-asc"):
         row[f"{prefix}_obj"]      = round(s_obj,  6) if not math.isnan(s_obj)  else "nan"
         row[f"{prefix}_gap_lp"]   = round(s_gap,  6) if not math.isnan(s_gap)  else "nan"
         row[f"{prefix}_time"]     = round(s_time, 4) if not math.isnan(s_time) else "nan"
-
-    if MODE == "fks-cg-dr" and hasattr(res, "transport_lp_times"):
-        tlp = res.transport_lp_times
-        row["fks_dr_tlp_s1_time"] = tlp[0] if len(tlp) > 0 else ""
-        row["fks_dr_tlp_s2_time"] = tlp[1] if len(tlp) > 1 else ""
 
 # Common solution quality
 gap_lp_pct   = (obj - lp.objective) / lp.objective * 100 \

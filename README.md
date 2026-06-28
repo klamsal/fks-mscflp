@@ -19,7 +19,7 @@ Run the main solver entrypoint from the solver directory:
 
 ```bash
 cd fks_mscflp
-/opt/anaconda3/bin/python3.11 solve.py --testbed=a --family=1000-4000 --idx=7 --mode=fks-cg
+/opt/anaconda3/bin/python3.11 solve.py --testbed=a --family=1000-4000 --idx=7 --mode=fks-cg-ws
 ```
 
 The raw benchmark files are expected under `benchmarks/` when you run the

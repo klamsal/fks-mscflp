@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RESULTS="$SCRIPT_DIR/results"
 
 FAMILIES="800-4400 1000-1000 1200-3000 1000-4000 2000-2000"
-MODES="ks-full ks-cg fks-cg"
+MODES="ks-full ks-cg ks-cg-ws fks-cg-ws"
 
 # Expected counts per family (p800-4400 in testbed_b only has 25)
 expected() {
@@ -18,8 +18,8 @@ expected() {
 }
 
 print_table() {
-    printf "\n%-14s  %-12s  %7s  %7s  %7s\n" "family" "testbed" "ks-full" "ks-cg" "fks-cg"
-    printf "%-14s  %-12s  %7s  %7s  %7s\n" "--------------" "--------" "-------" "-------" "-------"
+    printf "\n%-14s  %-12s  %9s  %9s  %9s  %9s\n" "family" "testbed" "ks-full" "ks-cg" "ks-cg-ws" "fks-cg-ws"
+    printf "%-14s  %-12s  %9s  %9s  %9s  %9s\n" "--------------" "--------" "---------" "---------" "---------" "---------"
 
     for TB in a b; do
         for FAM in $FAMILIES; do
