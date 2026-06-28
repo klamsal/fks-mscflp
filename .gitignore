@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# macOS
+.DS_Store
+
+# Validation outputs
+benchmarks/
+fks_mscflp/results/
+fks_mscflp/logs/
