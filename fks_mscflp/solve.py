@@ -26,11 +26,10 @@ import sys
 import time
 from pathlib import Path
 
-from instance  import CflpInstance
-from loaders   import load_plc, find_instance, list_testbed
+from loaders   import load_plc, find_instance
 from lp_solver import solve_lp, solve_lp_cg
 from ks        import run_ks
-from fks       import run_fks, DEFAULT_STAGES
+from fks       import run_fks
 from ks_ws     import run_ks_ws
 from testa_zub import TESTA_ZUB
 
@@ -80,7 +79,7 @@ FIELDNAMES = [
     "fks_s1_k", "fks_s1_n_edges", "fks_s1_n_milps", "fks_s1_obj", "fks_s1_gap_lp", "fks_s1_time",
     "fks_s2_k", "fks_s2_n_edges", "fks_s2_n_milps", "fks_s2_obj", "fks_s2_gap_lp", "fks_s2_time",
     "fks_s3_k", "fks_s3_n_edges", "fks_s3_n_milps", "fks_s3_obj", "fks_s3_gap_lp", "fks_s3_time",
-    # FKS-DR only: transport LP solve times between stages
+    # Reserved historical columns kept for CSV compatibility
     "fks_dr_tlp_s1_time", "fks_dr_tlp_s2_time",
 ]
 
