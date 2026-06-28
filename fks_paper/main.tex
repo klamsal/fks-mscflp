@@ -1,0 +1,89 @@
+\documentclass[preprint,12pt,authoryear]{elsarticle}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{float}          % [H] placement
+\usepackage{placeins}       % \FloatBarrier between sections
+\usepackage[hidelinks]{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, shapes.geometric, positioning, fit, backgrounds}
+
+\pagestyle{empty}           % suppress page numbers in draft
+
+%% Theorem environments
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{remark}{Remark}
+
+%% Notation shortcuts
+\newcommand{\J}{\mathcal{J}}           % facilities
+\newcommand{\I}{\mathcal{I}}           % clients
+\newcommand{\K}{\mathcal{K}}           % kernel
+\newcommand{\Jone}{J_1}               % LP-open
+\newcommand{\Jfrac}{J_{\text{frac}}}  % LP-fractional
+\newcommand{\Jzero}{J_0}              % LP-closed
+\newcommand{\xLP}{x^{\text{LP}}}
+\newcommand{\yLP}{y^{\text{LP}}}
+\newcommand{\rc}[1]{\bar{c}_{#1}}     % reduced cost
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Revisiting Kernel Search for the Large-Scale Multi-Source
+       Capacitated Facility Location Problem:
+       Three Targeted Design Improvements}
+
+\author[jmu]{Kamal Lamsal}
+\ead{lamsalkx@jmu.edu}
+
+\address[jmu]{Department of Computer Information Systems and Business Analytics,
+              James Madison University, Harrisonburg, Virginia, USA}
+
+\begin{highlights}
+\item We revisit Kernel Search for the large-scale Multi-Source CFLP and
+      separate its runtime into LP and restricted-MILP components.
+\item Column generation targets the LP-relaxation bottleneck while preserving
+      the LP-derived information used by KS.
+\item A flat-$k$ edge rule gives explicit base edge-set sizes across instance
+      families and capacity regimes.
+\item Preserving incumbent arcs between stages makes the previous incumbent
+      feasible in the next restricted MILP.
+\item The computational study is structured to isolate LP acceleration,
+      MILP-stage acceleration, and end-to-end performance.
+\end{highlights}
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+\begin{keyword}
+Capacitated facility location \sep Kernel search \sep Column generation \sep
+Matheuristic \sep LP relaxation \sep Feasibility preservation \sep Multi-source
+\end{keyword}
+
+\end{frontmatter}
+
+\input{sections/introduction}
+\FloatBarrier
+\input{sections/formulation}
+\FloatBarrier
+\input{sections/algorithm}
+\FloatBarrier
+\input{sections/experiments}
+\FloatBarrier
+\input{sections/conclusion}
+
+\bibliographystyle{elsarticle-harv}
+\bibliography{references}
+
+\input{sections/appendix}
+
+\end{document}
