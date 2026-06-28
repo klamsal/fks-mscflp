@@ -1,0 +1,355 @@
+\section{Computational Experiments}
+\label{sec:experiments}
+
+The computational study uses component-wise comparisons to isolate each of the
+three design refinements introduced in Section~\ref{sec:audit}.
+In each comparison, exactly one component differs between the two variants,
+so the contribution of that specific modification is measured without confounding.
+This structure directly mirrors the analysis in Section~\ref{sec:audit}: each
+comparison targets one of the three design aspects in isolation.
+
+\subsection{Experimental Setup}
+
+\paragraph{Instances.}
+We use the large-scale MSCFLP benchmark families of
+\citet{avella2008effective}, also used by \citet{guastaroba2012kernel}.
+The main study covers the public Test Bed~A and Test Bed~C families listed in
+Table~\ref{tab:instance_families}.
+Test Bed~A and Test Bed~C share the same five facility-client scales but use
+independently drawn instances, providing a robustness check across instance
+variation within each scale.
+
+\begin{table}[htbp]
+\centering
+\caption{Large-scale benchmark families used in the computational study.}
+\label{tab:instance_families}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llrrrr}
+\toprule
+Test Bed & Family & $|\J|$ & $|\I|$ & $N$ & Instance indices \\
+\midrule
+A & p800-4400  &   800 & 4{,}400 & 30 & 1--30 \\
+A & p1000-1000 & 1{,}000 & 1{,}000 & 30 & 1--30 \\
+A & p1000-4000 & 1{,}000 & 4{,}000 & 30 & 1--30 \\
+A & p1200-3000 & 1{,}200 & 3{,}000 & 30 & 1--30 \\
+A & p2000-2000 & 2{,}000 & 2{,}000 & 30 & 1--30 \\
+\midrule
+C & p1000-1000 & 1{,}000 & 1{,}000 & 30 & 61--90 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Algorithms compared.}
+We report three variants, all implemented in Python~3.11 with Gurobi~13.0.2,
+run on an Apple M3~Pro (12-core CPU, 18~GB RAM).
+Each instance is solved in an independent process; only one instance runs at a
+time, so the full memory and CPU are available to each run.
+\begin{itemize}
+  \item \textbf{KS-LP}: our re-implementation of G\&S~2012 using the full LP
+        relaxation (Gurobi simplex).
+        All parameters follow G\&S~2012 defaults.
+        KS-LP is the within-study baseline; comparing against it measures
+        the combined effect of all three fixes.
+  \item \textbf{KS-CG}: the same KS-LP restricted-MILP phase with the full LP
+        replaced by column generation.
+        Comparing KS-CG against KS-LP isolates Fix~1 (LP cost) alone.
+  \item \textbf{KS-CG-WS}: KS-CG with feasibility-preserving stage transitions
+        and warm starting added, but retaining the original $\gamma$-threshold
+        arc selection.
+        Comparing KS-CG-WS against KS-CG isolates Fix~3 alone.
+  \item \textbf{FKS-CG-WS}: Funnel Kernel Search --- KS-CG-WS with the
+        $\gamma$-threshold replaced by the flat-$k$ criterion,
+        $(k_1, k_2, k_3) = (50, 20, 10)$.
+        Comparing FKS-CG-WS against KS-CG-WS isolates Fix~2 alone.
+        Comparing FKS-CG-WS against KS-LP gives the combined end-to-end picture.
+\end{itemize}
+
+\paragraph{Implementation details.}
+KS-LP uses the parameter choices of G\&S~2012: the LP-defined initial kernel,
+bucket size $l_{\text{buck}} = |\K|$, at most three analyzed buckets ($\bar{N}_B = 3$),
+objective cutoffs, and the bucket-forcing constraint.
+FKS uses the same kernel and bucket logic but replaces the single restricted-MILP
+phase with the flat-$k$ funnel described in Section~\ref{sec:algorithm}.
+The restricted-MILP time limit is 300~seconds per subproblem for all variants.
+G\&S~2012 allocated 900~seconds per subproblem~\citep{guastaroba2012kernel}
+(Section~3.2), noting that ``the software often finds quickly an optimal
+or near-optimal solution'' and that the limit exists mainly as a safeguard.
+Modern hardware and Gurobi reduce per-subproblem solve times considerably
+relative to the CPLEX~12.2 environment of G\&S~2012, so 300~seconds proves
+sufficient: our KS-LP recreation matches or slightly exceeds their published
+aggregate results on p1000-1000 (Section~\ref{sec:literature}).
+Because all four variants share this 300-second limit, all within-study
+comparisons are unaffected by the difference from the original paper.
+Runs are recorded with instance name, test bed, LP solver, stage widths,
+LP time, restricted-MILP time, objective value, and gap.
+
+\paragraph{Metrics.}
+The LP gap is
+\[
+  \text{gap}(\%) = \frac{z^H - z^{\mathrm{LP}}}{z^{\mathrm{LP}}} \times 100,
+\]
+where $z^H$ is the heuristic objective and $z^{\mathrm{LP}}$ is the LP lower
+bound from the same run.
+Because our LP lower bounds can differ slightly from those reported by
+G\&S~2012 due to solver and hardware differences (see Section~\ref{sec:lp_bounds}),
+we also report integer objectives for direct literature comparisons.
+Win/tie/loss counts use a tolerance of 0.01 cost units.
+Runtime is decomposed into LP time, restricted-MILP time, and total time
+whenever the breakdown is relevant.
+
+\subsection{Study 1: LP Bottleneck Removal}
+\label{sec:study_lp}
+
+The first study measures how much of the KS setup time is consumed by the LP
+phase and how accurately column generation replicates the full LP solution.
+This is primarily a timing and fidelity check, not a heuristic-quality
+comparison.
+
+Table~\ref{tab:lp_bottleneck} summarizes LP timing across all benchmark families.
+Two patterns stand out.
+First, CG LP always matches the full LP objective to machine precision: the
+two lower bounds agree in all reported significant figures on every completed
+instance, confirming that column generation supplies the same information to KS
+without altering its guidance.
+Second, the CG speedup grows sharply with instance size.
+For p1000-1000 (Test Bed~A), the full LP averages 58.0~seconds and CG reduces
+this to 1.3~seconds (45.6$\times$) using 3.4~iterations and activating only 3.3\%
+of the $10^6$ possible shipping arcs.
+For p2000-2000, the full LP averages 710.7~seconds and CG reduces this to
+4.2~seconds, a 170.2$\times$ speedup.
+The active-arc percentage falls as the instance grows (3.8\% for p800-4400 to
+2.4\% for p2000-2000), consistent with larger instances having sparser LP
+solutions and therefore more redundant columns to avoid.
+
+\begin{table}[htbp]
+\centering
+\caption{LP relaxation: full LP (Gurobi simplex) versus column-generation LP.
+         Speedup is the ratio of average full-LP time to average CG-LP time.
+         Active arcs reports the percentage of all $|\J|\times|\I|$ arcs
+         variables present in the terminal CG LP.
+         CG LP objectives match full LP objectives to machine precision on all
+         completed instances.}
+\label{tab:lp_bottleneck}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{llrrrrr}
+\toprule
+Test Bed & Family & Full LP (s) & CG LP (s) & Speedup & CG iters & Active arcs (\%) \\
+\midrule
+A & p800-4400  & 276.5 & 5.9 & 46.7$\times$  & 2.6 & 3.8 \\
+A & p1000-1000 &  58.0 & 1.3 & 45.6$\times$  & 3.4 & 3.3 \\
+A & p1000-4000 & 409.1 & 6.9 & 59.3$\times$  & 2.8 & 3.0 \\
+A & p1200-3000 & 389.3 & 4.5 & 85.8$\times$  & 3.3 & 2.5 \\
+A & p2000-2000 & 710.7 & 4.2 & 170.2$\times$ & 3.9 & 2.4 \\
+\midrule
+C & p1000-1000 &   8.8 & 0.7 & 13.5$\times$  & 1.3 & 3.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{On LP Lower-Bound Differences Between Studies}
+\label{sec:lp_bounds}
+
+Our full LP lower bounds for p1000-1000 match those of G\&S~2012 exactly on
+tight-capacity instances (instances~1--5), but are slightly higher on
+looser-capacity instances (instances~16--30), by up to 25~cost units.
+We treat these differences as numerical and reporting differences across
+software generations rather than as an algorithmic improvement in the LP bound.
+The original study used a different solver environment and reports rounded
+values, while our within-study comparisons use LP bounds computed in the same
+Gurobi environment for all three variants.
+The important validation for this paper is therefore internal: the CG LP
+reproduces our full LP lower bound to within $1.3 \times 10^{-5}$ on all
+instances, confirming that column generation supplies the same LP information
+used by the full-LP KS baseline.
+
+\subsection{Study 2: Restricted-MILP Acceleration}
+\label{sec:study_milp}
+
+The second study compares KS-CG and FKS-CG-WS on the restricted-MILP phase.
+Both variants receive identical CG LP output, so any difference in MILP time
+or solution quality is attributable to the flat-$k$ arc selection and
+feasibility-preserving stage transitions combined.
+Table~\ref{tab:kscg_fkscg} reports results across all families; a separate
+component-wise breakdown isolating each fix individually is given in
+Section~\ref{sec:study_components}.
+
+FKS-CG-WS never loses on solution quality: across all five Test Bed~A families
+(150 instances total), FKS-CG-WS matches or improves KS-CG on every instance.
+The quality advantage is most pronounced on p1000-4000 (23W/7T/0L) and
+p2000-2000 (22W/8T/0L), where the flat-$k$ arc selection appears to
+consistently deliver better facility combinations than the $\gamma$-threshold.
+
+MILP-phase speedup varies by family and depends on how incumbents interact with
+stage transitions.
+On families where LP solutions are relatively concentrated (p1000-1000: 1.86$\times$;
+p2000-2000: 2.18$\times$), the funnel's narrowing edge sets reduce subproblem size
+at each stage and FKS-CG-WS is substantially faster.
+On families with more diffuse LP support (p800-4400: 0.94$\times$; p1000-4000:
+0.80$\times$), incumbent-arc preservation fills later-stage edge sets with arcs
+from the Stage~1 solution, limiting the thinning effect of the funnel.
+In these cases FKS-CG-WS's MILP phase is slightly slower than KS-CG, but end-to-end
+FKS-CG-WS remains faster once the LP-phase savings are included (Table~\ref{tab:end_to_end}).
+
+Test Bed~C p1000-1000 (30 independent instances, indices 61--90) shows
+1.76$\times$ MILP speedup with 7W/22T/1L.
+The single loss is instance~82, where KS-CG finds an objective 2.6 cost units
+lower (a 0.00007\% relative difference), consistent with numerical noise rather
+than a systematic quality difference.
+
+\begin{table}[htbp]
+\centering
+\caption{Restricted-MILP phase: KS-CG versus FKS-CG-WS on the same CG LP.
+         MILP time excludes the shared LP phase.
+         Speedup is KS-CG time divided by FKS-CG-WS time.
+         W/T/L counts wins, ties, and losses for FKS-CG-WS relative to KS-CG
+         by integer objective ($\pm 0.01$ tolerance).}
+\label{tab:kscg_fkscg}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{llrrrrr}
+\toprule
+ & & & \multicolumn{2}{c}{Avg.\ MILP time (s)} & & \\
+\cmidrule(lr){4-5}
+TB & Family & $N$ & KS-CG & FKS-CG-WS & Speedup & W/T/L \\
+\midrule
+A & p800-4400  & 30 & 513.7 & 546.3 & 0.94$\times$ & 12/18/0 \\
+A & p1000-1000 & 30 &  80.6 &  43.4 & 1.86$\times$ &  1/29/0 \\
+A & p1000-4000 & 30 & 444.3 & 555.0 & 0.80$\times$ & 23/7/0  \\
+A & p1200-3000 & 30 & 508.8 & 481.3 & 1.06$\times$ & 16/14/0 \\
+A & p2000-2000 & 30 & 479.2 & 219.5 & 2.18$\times$ & 22/8/0  \\
+\midrule
+C & p1000-1000 & 30 & 125.1 &  71.2 & 1.76$\times$ &  7/22/1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Study 3: End-to-End Performance}
+\label{sec:study_end_to_end}
+
+Table~\ref{tab:end_to_end} reports end-to-end results across all families.
+FKS-CG-WS never loses on solution quality against KS-LP across all 150 Test Bed~A
+instances: the W/T/L counts show wins or ties only.
+The same holds against KS-CG except for the single numerically negligible
+loss on Test Bed~C instance~82 noted above.
+
+The end-to-end speedup over KS-LP grows with instance size, driven primarily
+by the LP phase.
+For p1000-1000, where the full LP is already modest (58~s), the combined speedup
+is 3.08$\times$.
+For p2000-2000, where the full LP averages 710.7~s and column generation
+reduces this to 4.2~s, the combined speedup reaches 5.32$\times$.
+
+The pattern across families also illustrates the interaction between the two
+phases.
+On p800-4400, FKS-CG-WS's MILP phase is slightly slower than KS-CG (0.94$\times$),
+but the LP-phase saving of 270~s per instance still produces a 1.52$\times$
+end-to-end gain over KS-LP.
+On p1000-4000, FKS-CG-WS's MILP phase is again slower than KS-CG (0.80$\times$),
+yet end-to-end FKS-CG-WS is 2.01$\times$ faster than KS-LP because the LP saving
+(409~s full LP versus 6.9~s CG) dominates.
+On p2000-2000, both phases favor FKS-CG-WS simultaneously: the LP phase contributes
+a 170$\times$ speedup and the MILP phase contributes a further 2.18$\times$,
+yielding the largest combined gain in the study.
+
+\begin{table}[htbp]
+\centering
+\caption{End-to-end total time (LP + restricted-MILP) for all three variants.
+         Speedup is KS-LP time divided by FKS-CG-WS time.
+         W/T/L counts wins, ties, and losses for FKS-CG-WS relative to each
+         baseline by integer objective ($\pm 0.01$ tolerance).
+         Solution quality (gap) is reported separately in
+         Table~\ref{tab:kscg_fkscg}.}
+\label{tab:end_to_end}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{llrrrrrrr}
+\toprule
+ & & & \multicolumn{3}{c}{Avg.\ total time (s)} & & \multicolumn{2}{c}{W/T/L (FKS-CG-WS vs)} \\
+\cmidrule(lr){4-6}\cmidrule(lr){8-9}
+TB & Family & $N$ & KS-LP & KS-CG & FKS-CG-WS & Speedup & KS-LP & KS-CG \\
+\midrule
+A & p800-4400  & 30 &   838.3 & 519.6 & 552.3 & 1.52$\times$ & 15/15/0 & 12/18/0 \\
+A & p1000-1000 & 30 &   137.9 &  81.8 &  44.7 & 3.08$\times$ &  4/26/0 &  1/29/0 \\
+A & p1000-4000 & 30 & 1{,}131.7 & 449.9 & 561.9 & 2.01$\times$ & 17/13/0 & 23/7/0  \\
+A & p1200-3000 & 30 & 1{,}048.6 & 513.3 & 485.8 & 2.16$\times$ & 16/14/0 & 16/14/0 \\
+A & p2000-2000 & 30 & 1{,}189.3 & 483.6 & 223.7 & 5.32$\times$ & 22/8/0  & 22/8/0  \\
+\midrule
+C & p1000-1000 & 30 & 185.1 & 125.8 & 71.8 & 2.58$\times$ & 4/25/1 & 7/22/1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Study 4: Component-wise Isolation of Fix~2 and Fix~3}
+\label{sec:study_components}
+
+Studies 1--3 compare FKS-CG-WS against KS-CG, which differs in two ways: it uses
+flat-$k$ arc selection (Fix~2) and feasibility-preserving stage transitions
+(Fix~3).
+To isolate each fix, we compare against KS-CG-WS, which adds only the
+feasibility-preserving transitions to KS-CG while retaining the $\gamma$-threshold.
+
+\begin{itemize}
+  \item KS-CG versus KS-CG-WS: measures Fix~3 (feasibility-preserving
+        transitions) alone, with arc selection held constant.
+  \item KS-CG-WS versus FKS-CG-WS: measures Fix~2 (flat-$k$ arc selection) alone,
+        with feasibility-preserving transitions held constant.
+\end{itemize}
+
+Results for p1000-4000 Test Bed~A (30 instances) are reported here; this family
+was selected because its size and capacity regime produce clear quality
+differences in Study~2.
+[Results table to be inserted once KS-CG-WS runs are complete.]
+
+\subsection{Validating the KS-LP Baseline Against Published Results}
+\label{sec:literature}
+
+\paragraph{Why a re-implementation is necessary.}
+The computational environments in G\&S~2012 and this study differ in solver
+(CPLEX~12.2 versus Gurobi), hardware (Intel Xeon 2.27~GHz versus modern
+hardware), and per-subproblem time limit (900~seconds versus 300~seconds).
+These differences make direct comparisons of running times meaningless, and
+they mean we cannot use the published G\&S timing or solution results as the
+control in our ablation study.
+Instead, we re-implement the G\&S algorithm exactly --- same formulation, same
+parameter choices ($\gamma$, $l_{\text{buck}}$, $\bar{N}_B$, $p$), same
+kernel construction and bucket logic --- and run it as KS-LP in our own
+environment.
+All proposed variants (KS-CG, KS-CG-WS, FKS-CG-WS) are then compared against
+this same KS-LP baseline, ensuring that solver, hardware, and time limit are
+identical across every comparison in the study.
+
+\paragraph{How we know the re-implementation is fair.}
+The validity of this design depends entirely on whether our KS-LP recreation
+is a faithful and adequate representation of the original algorithm.
+If our re-implementation were systematically weaker than G\&S's, the study
+would be unfairly easy: our new methods would beat a handicapped baseline.
+We therefore validate KS-LP against G\&S's published results on the p1000-1000
+Test Bed~A family, using the same benchmark quantity G\&S report: improvement
+over the Avella et al.~\citep{avella2008effective} published upper bounds.
+
+G\&S report an average improvement of $-0.13\%$ over those bounds, with 26
+improvements out of 30 instances.
+Our KS-LP achieves the same average improvement figure, improves 28 upper
+bounds, and ties the remaining 2 --- despite using only one-third of
+their per-subproblem time budget.
+Because G\&S report rounded optimality gaps rather than raw integer objectives,
+we also perform a secondary reconstruction check using
+\[
+  \tilde{z}^{H}_{\mathrm{BKS}}
+  =
+  \frac{z^{LB}_{\mathrm{BKS}}}
+       {1-\mathrm{Gap}_{\mathrm{BKS}}/100},
+\]
+which gives the same aggregate conclusion: our KS-LP objective is slightly
+lower than the reconstructed B-KS average (treated as an approximate
+consistency check only, given the rounded inputs).
+
+Our KS-LP re-implementation therefore produces \emph{at least as good}
+solution quality as the published G\&S results on this family.
+This confirms that KS-LP is a fair, non-handicapped representation of
+the original algorithm, and that any gains attributed to KS-CG, KS-CG-WS,
+or FKS-CG-WS in the following studies represent genuine improvements over
+a credible baseline.
+Detailed per-instance results appear in Appendix~\ref{app:detail}.

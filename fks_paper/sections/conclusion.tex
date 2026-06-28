@@ -1,0 +1,46 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+Kernel Search for the large-scale MSCFLP is effective because it uses the LP
+relaxation to identify a small set of promising facilities and arcs before
+solving restricted MILPs.
+The same dependence on the LP, however, exposes a bottleneck on the largest
+instances: obtaining the LP information can itself become expensive.
+This paper addresses that bottleneck directly by solving the KS LP relaxation
+through column generation.
+The intention is not to alter the heuristic guidance, but to obtain the
+LP-derived bound, facility partition, and reduced-cost signal at lower setup
+cost.
+
+The second contribution concerns the restricted-MILP phase.
+The original KS framework already contains several speed controls, such as
+limiting bucket exploration and removing unpromising facilities from the kernel.
+Those controls reduce MILP effort but naturally introduce a speed-quality
+trade-off.
+FKS instead organizes the restricted search as a flat-$k$ funnel.
+The flat-$k$ rule gives predictable base subproblem sizes, while preserving all
+incumbent arcs and facilities between consecutive stages guarantees that the
+previous solution is feasible in the next restricted MILP.
+This gives a simple structural basis for warm-starting later stages after the
+edge set has been narrowed.
+
+The broader message is diagnostic.
+Matheuristic improvements benefit from examining the existing method's design
+choices carefully before proposing new components.
+For G\&S~2012 KS on the MSCFLP, a close reading surfaces three design aspects
+that can each be refined --- avoidable LP cost, biased arc selection, and
+cold-start MILP transitions --- each with a targeted, independently verifiable
+modification.
+The computational study is organized around this structure: each comparison
+changes exactly one component, making it possible to attribute improvements
+to a specific design decision rather than to the aggregate effect of the method.
+
+Several extensions remain natural.
+First, completing the remaining Test Bed~A and Test Bed~C families will provide
+a broader robustness check across facility-client scales and capacity regimes.
+Second, per-client adaptive budgets could allocate more arcs to clients with
+diffuse LP support and fewer arcs to clients with concentrated support while
+retaining the incumbent-preservation guarantee.
+Third, the feasibility-preservation principle may be useful in other Kernel
+Search settings whenever restricted subproblems are built by selecting subsets
+of variables used by an incumbent solution.

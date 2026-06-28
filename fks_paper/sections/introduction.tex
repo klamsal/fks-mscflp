@@ -1,0 +1,154 @@
+\section{Introduction}
+\label{sec:intro}
+
+The \emph{Capacitated Facility Location Problem} (CFLP) is a classical model for
+selecting a set of facilities and allocating customer demand to them under
+capacity restrictions.
+It appears in distribution network design, supply chain planning, emergency
+service location, and telecommunications infrastructure
+design~\citep{klose2005facility,daskin2011network,laporte2019location}.
+In the \emph{Multi-Source} CFLP (MSCFLP), a customer's demand may be split
+among several open facilities.
+In the \emph{Single-Source} CFLP (SSCFLP), each customer must be assigned to one
+facility; this additional assignment restriction substantially changes the
+structure and computational difficulty of the problem~\citep{klose2005facility}.
+Both variants are NP-hard~\citep{sridharan1995capacitated}.
+
+This paper focuses on the large-scale MSCFLP.
+Avella et al.~\citep{avella2008effective} established a widely used
+computational benchmark for this setting and proposed a Lagrangean-relaxation
+and core-problem heuristic for instances with millions of variables.
+Guastaroba and Speranza~\citep{guastaroba2012kernel} introduced a
+Kernel Search (KS) matheuristic for the same problem class
+(which they refer to simply as the CFLP; we retain the MSCFLP label to
+distinguish it from the single-source variant).
+Their method solves the LP relaxation, identifies an initial kernel of
+LP-open and LP-fractional facilities, and solves a sequence of restricted MILPs
+that add promising LP-closed facilities through capacity-expanding buckets.
+The approach is effective because the strong MSCFLP formulation includes
+variable upper-bound constraints, which make the LP solution a reliable predictor
+of the facilities and arcs used in high-quality integer solutions.
+Speed controls in the original paper act on the restricted-MILP phase: bucket
+count limits, variable-count caps per subproblem, a kernel-pruning rule based on
+repeated non-selection, and a forcing constraint requiring each bucket subproblem
+to use a facility from the current bucket.
+A faster variant, B-KS(0), searches only over the initial LP-selected kernel.
+The original paper frames KS performance as a balance between restricted-search
+quality and the time required to solve the resulting MILPs.
+
+On the exact-method side, Görtz and Klose~\citep{gortz2012lagrangian} proposed a
+Lagrangian branch-and-bound that is competitive with the best exact approaches on
+the smaller GK instances.
+Fischetti, Ljubić, and Sinnl~\citep{fischetti2016benders} later showed that a
+modern Benders decomposition embedded in a branch-and-cut solver proves optimality
+for 210 out of 445 large-scale p* instances within a 50{,}000-second time limit,
+and consistently produces smaller gaps than KS across all three test beds.
+Their computational study confirms that solving the LP at the root node
+dominates the total runtime for the largest instances: more than 90\% of overall
+computing time may be spent in LP-based cut separation.
+To the best of our knowledge, these are the only results available for exact
+methods on the large-scale multi-source CFLP benchmark of Avella et al.
+
+This paper takes a different starting point: rather than proposing a new
+acceleration strategy, we ask whether the design choices embedded in G\&S~2012
+are each well-founded.
+A close reading of the method reveals three design choices, each of which can
+be refined independently.
+
+\textbf{LP construction cost.}
+The full LP relaxation contains $|\J||\I|$ shipping variables.
+At optimality, most carry positive reduced cost and contribute nothing to the
+LP solution or to the KS guidance it produces.
+Constructing the full matrix is therefore unnecessary: column generation recovers
+the same bound, facility partition, and reduced-cost signal without ever
+materialising the irrelevant variables.
+
+\textbf{Arc selection bias.}
+G\&S~2012 includes arc $(j,i)$ whenever its reduced cost falls below a global
+threshold $\gamma$, the mean reduced cost over LP-active arcs.
+The threshold provides no guarantee on subproblem size and is structurally
+biased: a bucket facility $j \in \Jzero$ has LP dual $\alpha^*_j = 0$, so its
+arc reduced cost $c_{ji} - \pi^*_i$ contains no capacity signal.
+A kernel facility with positive dual receives a capacity-dual discount that
+lowers its reduced costs; the same $\gamma$ therefore admits more kernel arcs
+than bucket arcs, giving bucket facilities a systematically smaller arc set
+in every restricted MILP.
+
+\textbf{Cold-start stage transitions.}
+G\&S~2012 passes no solution information between consecutive restricted MILPs.
+When the arc set is modified between stages, the incumbent from the previous
+subproblem may no longer be feasible: arcs it uses may simply be absent from the
+new edge set.
+Because feasibility cannot be guaranteed, the incumbent cannot be supplied as
+a warm start, and the solver must rediscover a feasible solution from scratch at
+every stage.
+This is not an obvious limitation of warm starting in general; it is a
+structural consequence of arc-set transitions that discard incumbent arcs.
+
+We address each in turn.
+The LP is solved by column generation.
+Arc selection is replaced by a client-centric flat-$k$ criterion: for each
+client, the $k$ kernel facilities with lowest reduced cost are included,
+giving an exact subproblem-size guarantee and treating all facilities uniformly
+regardless of their LP dual value.
+Stage transitions are made feasibility-preserving by including every arc used by
+the current incumbent when building the next stage's edge set; we prove that
+this construction guarantees the incumbent is feasible in the next restricted
+MILP, making it a valid warm start by construction.
+The resulting repaired variant is \emph{Funnel Kernel Search} (FKS).
+It retains the full architecture of G\&S~2012 --- the strong MSCFLP formulation,
+the LP-defined kernel, reduced-cost guidance, and bucket expansion --- and
+modifies only the three components identified above.
+
+The contributions are as follows.
+\begin{itemize}
+  \item \textbf{Design analysis.}
+        We examine the G\&S~2012 design and identify three aspects where
+        targeted modifications yield consistent improvements:
+        (1)~the LP is built in full when column generation recovers the same
+        information at lower cost;
+        (2)~the global $\gamma$ threshold for arc selection admits no size
+        guarantee and treats bucket facilities less favorably, since their LP
+        dual is zero and their arc reduced costs carry no capacity signal,
+        causing the same $\gamma$ to admit fewer arcs than for kernel
+        facilities;
+        (3)~the restricted-MILP phase starts cold at each stage, forcing the
+        solver to rediscover feasibility after every arc-set transition.
+  \item \textbf{Fix~1 --- LP cost.}
+        We apply column generation to the MSCFLP LP relaxation,
+        retaining the bound, facility partition, and reduced-cost signal
+        required by KS while avoiding full-matrix construction.
+  \item \textbf{Fix~3 --- feasibility-preserving stage transitions.}
+        We prove that including every incumbent arc in the next stage's edge set
+        guarantees the previous solution is feasible in the next restricted MILP
+        (Proposition~\ref{prop:feasibility}).
+        This is a structural result, not a heuristic: feasibility is guaranteed
+        by construction and makes the incumbent a provably valid MIP start at
+        every stage.
+  \item \textbf{Fix~2 --- arc selection.}
+        With the feasibility guarantee in place, we introduce a client-centric
+        flat-$k$ criterion that replaces the global $\gamma$ threshold.
+        The flat-$k$ rule narrows the fill set aggressively across stages
+        (50$\to$20$\to$10 arcs per client) without risking cold restarts,
+        because Proposition~\ref{prop:feasibility} holds regardless of how
+        small $k$ becomes.
+        It also gives an exact subproblem-size guarantee
+        (Proposition~\ref{prop:size}) and treats all facilities uniformly.
+  \item \textbf{Component-wise study.}
+        The computational study isolates each fix via a dedicated comparison:
+        full LP versus CG LP (Fix~1 alone), KS-CG versus KS-CG-WS (Fix~3
+        alone), KS-CG-WS versus FKS-CG-WS (Fix~2 alone), and end-to-end
+        KS-full versus FKS-CG-WS (combined effect).
+\end{itemize}
+
+The remainder of the paper is organized as follows.
+Section~\ref{sec:formulation} gives the MSCFLP formulation and the LP structure
+used by KS.
+Section~\ref{sec:algorithm} examines these three design aspects formally,
+then presents the modifications in order of dependency: column-generation LP
+(Fix~1), feasibility-preserving stage transitions with their structural proof
+(Fix~3), and flat-$k$ arc selection (Fix~2) --- which relies on Fix~3 to
+narrow arc sets safely.
+Section~\ref{sec:experiments} describes the component-wise computational study
+and reports results on the large-scale Test Bed benchmarks.
+Section~\ref{sec:conclusion} concludes.

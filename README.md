@@ -6,7 +6,9 @@ capacitated facility location problem.
 ## Layout
 
 * `fks_mscflp/` - solver code, runners, and result writers
+* `fks_paper/` - paper source for the FKS manuscript
 * `analysis/` - comparison scripts and derived objective tables
+* `Literature/` - local reference library, not tracked in Git
 * `benchmarks/` - local instance data and archives, not tracked in Git
 
 ## Usage

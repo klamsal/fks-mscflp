@@ -1,0 +1,115 @@
+\section{Introduction}
+\label{sec:intro}
+
+Facility location problems are among the most studied classes of
+combinatorial optimization, with applications in logistics, supply chain
+design, and public service planning~\citep{klose2005facility,laporte2019location}.
+The \emph{Capacitated Facility Location Problem} (CFLP) asks for a
+minimum-cost selection of facilities from a set of candidate sites,
+together with an assignment of client demand to open facilities, subject
+to capacity constraints.
+In the \emph{multi-source} variant (MSCFLP) considered here, each
+client's demand may be split across several open facilities---a natural
+model for settings where a single supplier cannot economically serve an
+entire account.
+The MSCFLP is NP-hard and computationally challenging at large scale;
+its LP relaxation, however, is notably tight because the
+variable-upper-bound constraints $x_{ji} \leq d_i y_j$ are binding in
+the LP, making the LP bound an accurate proxy for the integer optimum.
+
+\paragraph{Kernel Search.}
+Guastaroba and Speranza~\citep{guastaroba2012kernel} introduced a
+Kernel Search (KS) matheuristic for the MSCFLP that exploits LP
+relaxation information to decompose the full MILP into a sequence of
+smaller, tractable subproblems.
+Their framework identifies a \emph{kernel}---a subset of LP-open or
+fractionally-open facilities---and an \emph{edge set} connecting kernel
+facilities to clients.
+A MILP restricted to this edge set is solved, followed by a bucket
+expansion phase that iteratively adds LP-closed facilities and re-solves.
+The key design choice determining solution quality and subproblem size
+is \emph{how edges are selected}: Guastaroba and Speranza use a
+reduced-cost threshold $\gamma$, including edge $(j,i)$ if
+$\bar{c}_{ji} \leq \gamma$, where $\gamma$ is the mean reduced cost
+over LP-positive $x$ variables.
+This facility-centric, dual-based criterion connects each facility to
+potentially many clients, producing subproblems whose size is
+uncontrolled and grows with instance scale.
+A practical consequence is that large instances require long MILP solve
+times simply to establish a first feasible incumbent, before any
+refinement can begin.
+
+\paragraph{Our contribution.}
+We propose \emph{Funnel Kernel Search} (FKS), a multi-stage
+matheuristic that replaces the $\gamma$-threshold with a dual-based,
+client-centric strategy.
+The name captures the core mechanism: the algorithm plays multiple
+rounds, each round removing chairs (reducing the edge set) while
+allowing players (clients) to keep the seats they already occupy
+(incumbent arcs).
+
+The algorithm has three stages.
+In Stage~1, a wide edge net ($k=50$ edges per client, selected by
+lowest reduced cost) is solved with Gurobi's feasibility-first mode,
+finding a strong incumbent quickly.
+This criterion mirrors G\&K's $\gamma$-threshold---both select arcs
+with low reduced cost---but bounds the subproblem size at exactly
+$k|\I|$ edges regardless of instance scale.
+In Stage~2, the edge set is rebuilt from the Stage~1 \emph{integer
+allocation}: every arc used in the incumbent is preserved, and
+remaining slots are filled to $k=20$ by reduced cost.
+The Stage~1 solution is injected as a warm start, so Gurobi immediately
+has a feasible point and focuses entirely on improvement.
+Stage~3 repeats the same logic, tightening further to $k=10$.
+
+This design has three properties that distinguish it from the
+$\gamma$-threshold:
+
+\begin{enumerate}
+  \item \textbf{Bounded subproblem size.}
+    Each stage uses at most $k|\I|$ edges, regardless of instance
+    scale or LP density.
+    The $\gamma$-threshold produces hundreds of edges per client on
+    large instances; FKS produces exactly $k|\I|$.
+
+  \item \textbf{Warm-start feasibility by construction.}
+    Stage~2's edge set contains every arc used by the Stage~1
+    incumbent, so the warm-started solution is immediately feasible.
+    No feasibility search is needed; Gurobi jumps directly to
+    improvement.
+
+  \item \textbf{Integer-allocation feedback.}
+    Edge sets in stages 2 and 3 are derived from the \emph{integer}
+    solution, not the LP relaxation.
+    This targets the subproblem at what actually worked in the previous
+    stage, converging faster than repeatedly re-deriving from the LP.
+\end{enumerate}
+
+Computational experiments on all 150 instances of the Test Bed~A
+benchmark of Avella et al.~\citep{avella2008effective}---comprising up
+to $2{,}000 \times 4{,}400$ instances at tight capacity
+($\rho = 1.1$)---show that FKS achieves zero losses vs.\ the
+Guastaroba--Speranza (2012) baseline across all families, with three
+outright wins on the $1{,}000 \times 1{,}000$ family and a $5\times$
+speedup on average.
+
+\paragraph{Relation to concurrent work.}
+Bakker et al.~\citep{bakker2025paks} independently propose a
+Pattern-based Kernel Search (PaKS) for the \emph{single-source} CFLP
+(SSCFLP), where each client must be assigned to exactly one facility.
+PaKS gathers structural information by solving $N+1$ LP relaxations and
+applying spectral biclustering to group locations and clients into
+regions.
+Our work differs in three ways: (i)~we target the MSCFLP, where the LP
+relaxation is significantly tighter; (ii)~our edge selection adds zero
+overhead beyond the single LP solve already required by KS; and
+(iii)~we measure solution quality against the LP lower bound, providing
+a tighter certificate of near-optimality.
+
+\paragraph{Paper structure.}
+Section~\ref{sec:formulation} states the MSCFLP formally and analyzes
+LP solution structure.
+Section~\ref{sec:algorithm} describes the FKS algorithm in full.
+Section~\ref{sec:experiments} presents computational results on
+Test Bed~A.
+Section~\ref{sec:conclusion} concludes.

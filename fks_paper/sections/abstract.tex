@@ -1,0 +1,40 @@
+Kernel Search (KS) remains one of the strongest matheuristics for the
+large-scale Multi-Source Capacitated Facility Location Problem (MSCFLP).
+This paper takes a design-analysis perspective on G\&S~2012 Kernel Search.
+A close examination of the original method reveals three design choices that
+can each be refined independently, yielding consistent improvements in both
+solution quality and computation time.
+
+The first concerns LP construction cost: the full LP relaxation contains all
+$|\J||\I|$ shipping variables, most of which play no role in the optimal
+solution.
+Column generation recovers the same bound, facility partition, and
+reduced-cost signal at substantially lower cost.
+
+The second concerns arc selection: the global reduced-cost threshold $\gamma$
+used to build restricted MILPs provides no size guarantee and systematically
+admits fewer arcs for bucket facilities than for kernel facilities, because
+bucket facilities have LP dual zero and receive no capacity-cost discount on
+their arc reduced costs.
+
+The third concerns stage transitions: when the arc set changes between stages,
+the incumbent solution from the previous subproblem may no longer be feasible
+in the next, because arcs it uses may be absent.
+The solver must rediscover feasibility from scratch at every stage transition.
+
+We address each with a targeted modification.
+Column generation replaces full LP construction.
+A client-centric flat-$k$ criterion replaces the global $\gamma$ threshold,
+selecting exactly $k$ arcs per client by reduced cost and treating all
+facilities uniformly.
+Stage transitions are made feasibility-preserving by including every arc used
+by the current incumbent when building the next edge set; we prove that this
+guarantees the incumbent is feasible in the next restricted MILP by
+construction, making it a valid warm start at every stage.
+The resulting repaired method retains the full architecture of G\&S~2012 and
+is named \emph{Funnel Kernel Search} (FKS).
+
+The computational study isolates each modification via a dedicated comparison,
+so that each improvement can be attributed to a specific design decision.
+Results are reported across five large-scale benchmark families from the
+Avella et al.\ test bed.

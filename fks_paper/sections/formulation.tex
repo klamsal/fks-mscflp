@@ -1,0 +1,117 @@
+\section{Problem Formulation and LP Structure}
+\label{sec:formulation}
+
+\subsection{The Multi-Source CFLP}
+
+Let $\J = \{1,\ldots,m\}$ be the set of potential facility locations and
+$\I = \{1,\ldots,n\}$ the set of clients.
+Each facility $j \in \J$ has a fixed opening cost $f_j > 0$ and a capacity
+$q_j > 0$.
+Each client $i \in \I$ has a demand $d_i > 0$.
+The unit shipping cost from facility $j$ to client $i$ is $c_{ji} \geq 0$.
+
+Let $y_j \in \{0,1\}$ indicate whether facility $j$ is open, and let
+$x_{ji} \in [0, d_i]$ be the amount of client $i$'s demand served by
+facility $j$.
+The MSCFLP is:
+
+\begin{align}
+  \min \quad & \sum_{j \in \J} f_j y_j
+               + \sum_{j \in \J} \sum_{i \in \I} c_{ji} x_{ji}
+               \label{eq:obj} \\
+  \text{s.t.} \quad
+  & \sum_{j \in \J} x_{ji} = d_i
+    && \forall i \in \I
+    \label{eq:demand} \\
+  & \sum_{i \in \I} x_{ji} \leq q_j y_j
+    && \forall j \in \J
+    \label{eq:capacity} \\
+  & x_{ji} \leq d_i y_j
+    && \forall j \in \J,\; i \in \I
+    \label{eq:vub} \\
+  & y_j \in \{0,1\}
+    && \forall j \in \J
+    \label{eq:binary} \\
+  & x_{ji} \geq 0
+    && \forall j \in \J,\; i \in \I.
+    \label{eq:nonneg}
+\end{align}
+
+Constraints~\eqref{eq:demand} ensure all demand is satisfied.
+Constraints~\eqref{eq:capacity} enforce facility capacities.
+The variable-upper-bound (VUB) constraints~\eqref{eq:vub} prevent routing
+demand to closed facilities.
+Together, constraints~\eqref{eq:capacity} and~\eqref{eq:vub} ensure that
+$y_j = 0$ implies $x_{ji} = 0$ for all $i$, tightening the LP relaxation
+substantially compared to formulations without VUB constraints.
+
+The LP relaxation is obtained by replacing~\eqref{eq:binary} with
+$0 \leq y_j \leq 1$.
+We denote its optimal solution by $(\xLP, \yLP)$ and its objective value
+by $z^{\text{LP}}$.
+Unless explicitly stated otherwise, gaps reported in this paper are measured
+relative to $z^{\text{LP}}$:
+\[
+  \text{gap}(\%) = \frac{z^H - z^{\text{LP}}}{z^{\text{LP}}} \times 100,
+\]
+where $z^H$ is the heuristic objective.
+This gives a common lower-bound-based measure across all algorithmic variants.
+When comparing with published tables, we also report objective values because
+published gaps may use different lower bounds or hardware.
+
+\subsection{LP Solution Structure}
+\label{sec:lp_structure}
+
+The LP solution partitions facilities into three disjoint sets based on
+$\yLP_j$:
+\begin{itemize}
+  \item $\Jone = \{j \in \J : \yLP_j = 1\}$: LP-open facilities,
+  \item $\Jfrac = \{j \in \J : 0 < \yLP_j < 1\}$: LP-fractional
+        facilities,
+  \item $\Jzero = \{j \in \J : \yLP_j = 0\}$: LP-closed facilities.
+\end{itemize}
+The \emph{kernel} is $\K = \Jone \cup \Jfrac$, following~\citet{guastaroba2012kernel}.
+
+\paragraph{Why the kernel predicts integer solutions.}
+The VUB constraints~\eqref{eq:vub} force $x_{ji} \leq d_i y_j$: no demand
+can be routed to a facility without opening it, even fractionally, in the LP.
+A LP-closed facility ($\yLP_j = 0$) therefore carries no LP flow; the LP
+found it suboptimal to open facility $j$ even fractionally.
+This is a useful signal: a facility that is LP-closed must overcome both fixed
+opening cost and capacity interactions before it becomes attractive in an
+integer solution.
+The computational evidence in \citet{guastaroba2012kernel} shows that the
+LP-defined kernel captures most facilities used in high-quality solutions on the
+large-scale benchmark families.
+This motivates the Kernel Search strategy: rather than solving the full
+$m$-facility MILP, start from $\K$ and test promising LP-closed facilities
+through restricted subproblems.
+
+\paragraph{Reduced costs.}
+Let $\pi_i \geq 0$ be the dual variable for demand constraint~\eqref{eq:demand}
+and $\alpha_j \leq 0$ the dual variable for capacity
+constraint~\eqref{eq:capacity}.
+For the LP relaxation, the \emph{reduced cost} of shipping variable $x_{ji}$
+is:
+\begin{equation}
+  \rc{ji} = c_{ji} - \pi_i - \alpha_j.
+  \label{eq:rc}
+\end{equation}
+At LP optimality, $\rc{ji} \geq 0$ for every variable at its lower bound
+($x_{ji} = 0$) and $\rc{ji} = 0$ for every basic variable ($x_{ji} > 0$).
+A variable with large positive reduced cost is far from being optimal to
+include: the LP would need a much cheaper shipping cost, or a much better
+dual price, before it would use that arc.
+This signal guides both column generation (Section~\ref{sec:cg}) and
+edge selection (Section~\ref{sec:edge_selection}).
+
+\paragraph{Why column generation is natural.}
+The LP solution of the strong MSCFLP formulation is often sparse relative to the
+complete $|\J||\I|$ shipping-variable matrix.
+Many shipping variables are zero at LP optimality and have nonnegative reduced
+cost.
+Column generation exploits this structure by leaving such variables outside the
+restricted master problem until their reduced cost indicates that they may
+improve the LP objective.
+Study~\ref{sec:study_lp} reports the observed active-column counts and checks
+LP agreement against the full formulation where the full LP can be solved.

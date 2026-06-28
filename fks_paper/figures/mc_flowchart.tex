@@ -1,0 +1,106 @@
+% FKS algorithm flowchart — vertical layout
+\begin{tikzpicture}[
+  node distance = 0.42cm,
+  font=\footnotesize,
+  std/.style  = {rectangle, draw=black!60, rounded corners=3pt,
+                 fill=gray!9, minimum width=5.8cm, minimum height=0.65cm,
+                 text centered, text width=5.6cm},
+  fks/.style  = {rectangle, draw=blue!70!black, rounded corners=3pt,
+                 fill=blue!13, thick,
+                 minimum width=5.8cm, minimum height=0.65cm,
+                 text centered, text width=5.6cm},
+  stg/.style  = {rectangle, draw=blue!70!black, rounded corners=3pt,
+                 fill=blue!6, dashed,
+                 minimum width=5.8cm, minimum height=0.65cm,
+                 text centered, text width=5.6cm},
+  arr/.style  = {-{Stealth[length=5pt,width=4pt]}, thick, draw=black!70},
+  warm/.style = {-{Stealth[length=5pt,width=4pt]}, thick, draw=blue!60, dashed},
+]
+
+%% ── Shared setup ─────────────────────────────────────────────────
+\node[std]               (lp)     {Solve LP relaxation via CG};
+\node[std, below=of lp]  (kernel) {Build kernel
+                                   $\mathcal{K}=J_1\cup J_{\mathrm{frac}}$,\;
+                                   sort $J_0$ by $\bar{c}_{y_j}$,\;
+                                   compute reduced costs};
+
+%% ── Stage 1 ──────────────────────────────────────────────────────
+\node[fks, below=0.5cm of kernel] (s1hdr)
+      {\textbf{Stage 1} \quad $k_1{=}50$,\ MIPFocus\,=\,1};
+\node[fks, below=of s1hdr] (s1edge)
+      {Reduced-cost top-$k_1$ edges per client
+       $\;\Rightarrow\;|\mathcal{E}_1|=k_1|\mathcal{I}|$};
+\node[fks, below=of s1edge] (s1milp)
+      {Solve MILP$(\mathcal{K},\,\mathcal{E}_1,\,z^H)$\quad
+       \textit{(no bucket expansion)}};
+\node[fks, below=of s1milp] (s1upd)
+      {Update $z^H$;\; record integer allocation $x^{(1)}$};
+
+%% ── Stage 2 ──────────────────────────────────────────────────────
+\node[stg, below=0.5cm of s1upd] (s2hdr)
+      {\textbf{Stage 2} \quad $k_2{=}20$,\ warm start $(y^{(1)},x^{(1)})$};
+\node[stg, below=of s2hdr] (s2edge)
+      {Keep incumbent arcs from $x^{(1)}$;\;
+       add reduced-cost top-$k_2$ edges};
+\node[std, below=of s2edge] (s2milp)
+      {Solve MILP$(\mathcal{K},\,\mathcal{E}_2,\,z^H)$};
+\node[std, below=of s2milp] (s2buck)
+      {Bucket expansion: add $B_h\!\subseteq\!J_0$,\;
+       flat-$k_1$ edges on $\mathcal{K}\cup B_h$};
+\node[stg, below=of s2buck] (s2upd)
+      {Update $z^H$;\; record integer allocation $x^{(2)}$};
+
+%% ── Stage 3 ──────────────────────────────────────────────────────
+\node[stg, below=0.5cm of s2upd] (s3hdr)
+      {\textbf{Stage 3} \quad $k_3{=}10$,\ warm start $(y^{(2)},x^{(2)})$};
+\node[stg, below=of s3hdr] (s3edge)
+      {Keep incumbent arcs from $x^{(2)}$;\;
+       add reduced-cost top-$k_3$ edges};
+\node[std, below=of s3edge] (s3milp)
+      {Solve MILP$(\mathcal{K},\,\mathcal{E}_3,\,z^H)$};
+\node[std, below=of s3milp] (s3buck)
+      {Bucket expansion (same as Stage~2)};
+\node[stg, below=of s3buck] (s3upd)
+      {Update $z^H$};
+
+%% ── Output ───────────────────────────────────────────────────────
+\node[std, below=0.5cm of s3upd] (out) {Return best $(y^H, x^H)$};
+
+%% ── Main flow ────────────────────────────────────────────────────
+\draw[arr] (lp)     -- (kernel);
+\draw[arr] (kernel) -- (s1hdr);
+\draw[arr] (s1hdr)  -- (s1edge);
+\draw[arr] (s1edge) -- (s1milp);
+\draw[arr] (s1milp) -- (s1upd);
+\draw[arr] (s1upd)  -- (s2hdr);
+\draw[arr] (s2hdr)  -- (s2edge);
+\draw[arr] (s2edge) -- (s2milp);
+\draw[arr] (s2milp) -- (s2buck);
+\draw[arr] (s2buck) -- (s2upd);
+\draw[arr] (s2upd)  -- (s3hdr);
+\draw[arr] (s3hdr)  -- (s3edge);
+\draw[arr] (s3edge) -- (s3milp);
+\draw[arr] (s3milp) -- (s3buck);
+\draw[arr] (s3buck) -- (s3upd);
+\draw[arr] (s3upd)  -- (out);
+
+%% ── Warm-start arrows (right side) ──────────────────────────────
+\draw[warm] (s1upd.east) -- ++(1.2,0)
+            node[right, font=\scriptsize, text=blue!70!black] {$y^{(1)}$}
+            |- (s2hdr.east);
+\draw[warm] (s2upd.east) -- ++(1.2,0)
+            node[right, font=\scriptsize, text=blue!70!black] {$y^{(2)}$}
+            |- (s3hdr.east);
+
+%% ── Legend ───────────────────────────────────────────────────────
+\node[fks,  below=0.7cm of out, xshift=-1.5cm,
+      minimum width=2.0cm, text width=1.8cm,
+      minimum height=0.45cm] (lmc) {};
+\node[right=0.12cm of lmc, font=\scriptsize] {FKS (new)};
+
+\node[std,  below=0.22cm of lmc,
+      minimum width=2.0cm, text width=1.8cm,
+      minimum height=0.45cm] (lstd) {};
+\node[right=0.12cm of lstd, font=\scriptsize] {Identical to G\&S (2012)};
+
+\end{tikzpicture}

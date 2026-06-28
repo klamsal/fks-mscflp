@@ -1,0 +1,449 @@
+\section{Design Analysis and Algorithm}
+\label{sec:algorithm}
+
+This section first recalls the G\&S~2012 baseline
+(Section~\ref{sec:ks_baseline}), then examines the three design aspects
+identified in the introduction (Section~\ref{sec:audit}).
+The three modifications are presented in order of dependency:
+column-generation LP (Section~\ref{sec:cg}),
+feasibility-preserving stage transitions (Section~\ref{sec:proposition}),
+and flat-$k$ arc selection (Section~\ref{sec:edge_selection}).
+Fix~3 is presented before Fix~2 because Proposition~\ref{prop:feasibility}
+is the structural reason the funnel's narrowing arc sets are safe to use:
+the fill size $k$ can be reduced aggressively only because the incumbent
+is always feasible by construction regardless of how small $k$ becomes.
+Section~\ref{sec:full_algorithm} presents the complete FKS-CG-WS algorithm.
+
+\subsection{Baseline Kernel Search (G\&S 2012)}
+\label{sec:ks_baseline}
+
+After solving the LP relaxation, facilities with positive LP dual
+($\alpha^*_j > 0$) form the \emph{kernel} $\K = \Jone \cup \Jfrac$;
+the remaining LP-closed facilities ($\alpha^*_j = 0$) form $\Jzero$ and are
+organized into \emph{buckets}.
+G\&S~2012 then proceeds as follows:
+
+\begin{enumerate}
+  \item \textbf{Kernel MILP.}
+    Solve MILP restricted to facilities in kernel $\K$ and edges
+    $\mathcal{E} = \{(j,i) : j \in \K,\; \rc{ji} \leq \gamma\}$,
+    where $\gamma = \text{mean}\{\rc{ji} : \xLP_{ji} > 0\}$ is the mean
+    reduced cost over LP-active arcs.
+    An objective cutoff $z^H$ is imposed.
+  \item \textbf{Bucket expansion.}
+    Sort $\Jzero$ by $\rc{y_j}$ ascending.
+    Add the next $l_{\text{buck}} = |\K|$ facilities as bucket $B_h$,
+    connect to clients with $\rc{ji} \leq \gamma$, and solve
+    MILP$(\K \cup B_h)$ with a forcing constraint $\sum_{j \in B_h} y_j \geq 1$.
+    Repeat for up to $\bar{N}_B = 3$ buckets.
+  \item \textbf{Kernel update.}
+    If an improved solution opens facilities from the bucket, add them to the
+    kernel.
+    Facilities already in the kernel are removed after repeated non-selection,
+    controlled by parameter $p$.
+    An iterative variant restarts the solution phase when new facilities are
+    added.
+\end{enumerate}
+
+This design gives several MILP-side controls over running time: the number of
+buckets, their size, the removal rule, and the time limit per restricted MILP.
+
+\subsection{Design Analysis: Three Refinement Opportunities}
+\label{sec:audit}
+
+Before presenting FKS, we examine three aspects of the G\&S~2012 design where
+targeted modifications improve performance.
+Each corresponds directly to one component of FKS.
+
+\paragraph{LP construction cost.}
+The full LP relaxation contains $|\J||\I|$ shipping variables.
+At optimality, the large majority carry positive reduced cost and are
+set to zero; they play no role in the LP solution and therefore provide
+no useful signal to KS.
+Constructing the full LP matrix is therefore unnecessary: column generation
+recovers the same LP bound, facility partition, and reduced-cost rankings
+without ever adding the irrelevant variables.
+On the largest instances (e.g., $|\J|=2{,}000$, $|\I|=2{,}000$), the full LP
+solve can dominate total running time, making KS slower than necessary before
+the first MILP is even solved.
+
+\paragraph{$\gamma$-threshold arc selection: size and bias.}
+G\&S~2012 includes arc $(j,i)$ in a restricted MILP whenever its reduced cost
+satisfies $\rc{ji} \leq \gamma$, where $\gamma$ is the mean reduced cost over
+LP-active arcs.
+Two concerns follow.
+First, the number of arcs admitted by $\gamma$ depends on LP concentration and
+can vary widely across instances and capacity regimes, giving unpredictable
+subproblem sizes.
+Second, consider a bucket facility $j \in \Jzero$ (LP dual $\alpha^*_j = 0$).
+By equation~\eqref{eq:pricing}, its arc reduced cost is
+$\rc{ji} = c_{ji} - \pi^*_i - \alpha^*_j = c_{ji} - \pi^*_i$: the capacity
+dual contributes nothing.
+For a kernel facility $j' \in \Jone$ with $\alpha^*_{j'} > 0$, the same
+formula gives $\rc{j'i} = c_{j'i} - \pi^*_i - \alpha^*_{j'} < c_{j'i} - \pi^*_i$.
+The capacity dual reduces kernel arc reduced costs, making them easier to pass
+the $\gamma$ threshold.
+Bucket arcs must clear a structurally higher hurdle with no capacity signal
+subtracted, so fewer bucket arcs qualify for any given $\gamma$.
+This treats bucket facilities less favorably than kernel facilities, giving
+them a systematically smaller arc set in every restricted MILP.
+
+\paragraph{Cold-start MILP transitions.}
+G\&S~2012 passes no information between consecutive restricted MILPs.
+When the arc set changes (between stages or between kernel and bucket MILPs),
+the incumbent solution from the previous subproblem may not be feasible in the
+next one, so the solver must find feasibility from scratch.
+In the multi-stage setting this is wasteful: a good solution is available but
+cannot be used because there is no guarantee it remains feasible after the
+arc set is modified.
+
+FKS addresses each aspect in turn through the components described in the
+following sections.
+
+\subsection{Column Generation for the LP}
+\label{sec:cg}
+
+\paragraph{Motivation.}
+The full LP over all $|\J| \times |\I|$ shipping variables can dominate KS
+runtime on large instances.
+The MSCFLP LP solution is typically sparse: only a small fraction of shipping
+variables carry positive flow at optimality.
+Column generation exploits this structure by starting with a small column set and
+adding only inactive variables that can improve the LP objective.
+
+\paragraph{Column generation setup.}
+We keep all $y_j$ variables in the model from the start (there are only
+$|\J|$ of them).
+Only the $x_{ji}$ shipping variables are generated on demand.
+
+The \emph{restricted master problem} (RMP) at iteration $t$ contains:
+\begin{itemize}
+  \item All $y_j$ variables with their opening costs $f_j$.
+  \item A subset $\mathcal{A}^t \subseteq \J \times \I$ of active
+        shipping columns with costs $c_{ji}$.
+  \item Demand constraints~\eqref{eq:demand}: $\sum_{j:(j,i)\in\mathcal{A}^t}
+        x_{ji} = d_i$ for each $i$ (initially enforced via a small artificial
+        variable to guarantee feasibility).
+  \item Capacity constraints~\eqref{eq:capacity}: $\sum_{i:(j,i)\in\mathcal{A}^t}
+        x_{ji} \leq q_j y_j$ for each $j$.
+  \item VUB constraints~\eqref{eq:vub}: $x_{ji} \leq d_i y_j$ for each
+        $(j,i) \in \mathcal{A}^t$.
+\end{itemize}
+When column $(j,i)$ is added to $\mathcal{A}^t$, its variable $x_{ji}$ enters
+the demand constraint for client $i$, the capacity constraint for facility $j$,
+and a new VUB constraint.
+
+\paragraph{Initialization.}
+We initialize $\mathcal{A}^0$ by selecting the $k_{\text{init}} = 30$
+cheapest facilities (by shipping cost $c_{ji}$) for each client $i$.
+This gives $30 \times |\I|$ initial columns (120{,}000 for a
+$1{,}000 \times 4{,}000$ instance), which is typically sufficient to produce
+a feasible RMP.
+
+\paragraph{Pricing step.}
+After solving the RMP at iteration $t$, let $\pi_i$ be the dual of demand
+constraint $i$ and $\alpha_j$ the dual of capacity constraint $j$.
+The reduced cost of any inactive shipping variable $x_{ji}$
+($(j,i) \notin \mathcal{A}^t$) is:
+\begin{equation}
+  \rc{ji} = c_{ji} - \pi_i - \alpha_j.
+  \label{eq:pricing}
+\end{equation}
+If $\rc{ji} < 0$, then adding $x_{ji}$ to the RMP can decrease the LP
+objective.
+We add \emph{all} inactive columns with $\rc{ji} < 0$ simultaneously, then
+re-solve.
+This is the ``full pricing'' variant of column generation.
+It is more expensive per iteration than pricing a single column, but it avoids
+long sequences of small RMP resolves and is effective when many columns have
+negative reduced cost in early iterations.
+When a shipping column is added, its VUB constraint is introduced at the same
+time.
+After convergence, reduced costs used for edge selection are taken from the
+final LP solution: active generated columns use the solver's reduced costs,
+while inactive columns use the final demand and capacity dual prices.
+The computational study checks the CG LP against the full LP whenever the full
+LP can be solved within the experimental protocol.
+
+\paragraph{Termination.}
+When no inactive column has $\rc{ji} < 0$ and all artificial variables are zero,
+the current RMP solution is accepted as the LP solution passed to KS.
+This follows from LP duality: at the optimal RMP dual $(\pi, \alpha)$,
+every column with $\rc{ji} \geq 0$ can only increase the objective if added,
+so no ungenerated shipping column is attractive under the pricing oracle.
+
+\paragraph{Vectorized implementation.}
+The pricing step~\eqref{eq:pricing} is a matrix subtraction.
+Let $C \in \mathbb{R}^{|\J| \times |\I|}$ be the shipping cost matrix.
+After solving the RMP, the reduced costs of all $|\J| \times |\I|$ pairs are:
+\[
+  \mathrm{RC} = C - \boldsymbol{\pi}^{\top}[\text{broadcasted}]
+                  - \boldsymbol{\alpha}[\text{broadcasted}].
+\]
+All inactive entries of $\mathrm{RC}$ with value $< 0$ are added in one
+operation.
+For $|\J| = 1{,}000$ and $|\I| = 4{,}000$, this is a single NumPy operation on a
+$1{,}000 \times 4{,}000$ matrix and is small relative to the RMP solves in our
+target setting.
+
+\paragraph{Convergence in practice.}
+For each reported instance where the full LP is solved, we compare the CG
+objective value, facility partition, and reduced-cost rankings with those
+obtained from the full LP.
+This check is important because the purpose of CG in FKS is acceleration, not a
+change in the information used to guide Kernel Search.
+Section~\ref{sec:study_lp} reports the resulting CG iteration counts, active
+columns, LP times, and full-LP comparisons.
+
+\paragraph{Remark on branch-and-price.}
+Column generation applied to the LP relaxation does \emph{not} make FKS a
+branch-and-price algorithm.
+Branch-and-price is an exact method that solves an LP at every node of a
+branch-and-bound tree~\citep{barnhart1998branch}.
+FKS solves the LP exactly once (via CG), then runs heuristic MILPs with no
+LP re-solve.
+The heuristic character of FKS is unchanged; CG is purely a speed-up for
+the single LP solve that KS already requires.
+
+\subsection{Feasibility-Preserving Stage Transitions}
+\label{sec:proposition}
+
+When an arc set changes between stages, arcs used by the incumbent may be
+absent from the new set, making the incumbent infeasible.
+The solver must then rediscover feasibility from scratch.
+We eliminate this by including all incumbent arcs in the next stage's edge
+set by construction.
+
+Let $(y^s, x^s)$ be the best solution found after Stage~$s$.
+For Stage~$s{+}1$ with parameter $k_{s+1}$, we define the edge set as:
+\begin{equation}
+  \mathcal{E}^{\text{inc}}_{k_{s+1}}(x^s)
+  = \bigcup_{i \in \I}
+    \Bigl(
+      \underbrace{\{(j, i) : x^s_{ji} > 0\}}_{\text{incumbent arcs}}
+      \;\cup\;
+      \underbrace{\text{top-}k_{s+1}\text{ by } \rc{ji}
+      \text{ in } \K}_{\text{reduced-cost fill}}
+    \Bigr).
+  \label{eq:stage2_edges}
+\end{equation}
+Each later stage therefore contains the incumbent arcs plus a reduced-cost
+fill set.
+The edge count is at most $k_{s+1}|\I|$ plus the number of incumbent arcs
+not already in the fill set.
+
+\begin{proposition}[Feasibility Preservation]
+\label{prop:feasibility}
+Let $(y^s, x^s)$ be a feasible solution to the Stage~$s$ restricted MILP
+with facility set $\mathcal{F}^s$ and edge set $\mathcal{E}^s$.
+Let the Stage~$(s{+}1)$ facility set $\mathcal{F}^{s+1}$ contain every
+facility with $y^s_j=1$.
+Let $\mathcal{E}^{s+1} = \mathcal{E}^{\mathrm{inc}}_{k_{s+1}}(x^s)$ as in
+equation~\eqref{eq:stage2_edges}.
+Then $(y^s, x^s)$ is feasible in the Stage~$(s{+}1)$ restricted MILP.
+\end{proposition}
+
+\begin{proof}
+By construction~\eqref{eq:stage2_edges}, for every client $i$ and every
+facility $j$ with $x^s_{ji} > 0$, the arc $(j,i)$ belongs to
+$\mathcal{E}^{s+1}$.
+The assumption on $\mathcal{F}^{s+1}$ ensures every facility opened by
+$y^s$ is available in the next restricted MILP.
+We verify the three constraint types:
+\begin{enumerate}
+  \item \textbf{Demand.} $(y^s, x^s)$ satisfies $\sum_j x^s_{ji} = d_i$
+    for every client $i$. The same equality holds in Stage~$(s{+}1)$
+    because every arc used by $x^s$ is present.
+  \item \textbf{Capacity.} $(y^s, x^s)$ satisfies
+    $\sum_i x^s_{ji} \leq q_j y^s_j$. Since $y^s$ and $x^s$ are unchanged,
+    this constraint is satisfied.
+  \item \textbf{Variable upper bound.} $(y^s, x^s)$ satisfies
+    $x^s_{ji} \leq d_i y^s_j$ for every arc with $x^s_{ji} > 0$.
+    These arcs are present in $\mathcal{E}^{s+1}$, so the VUB constraints
+    are present and satisfied.
+\end{enumerate}
+Therefore $(y^s, x^s)$ is feasible in Stage~$(s{+}1)$. \hfill$\square$
+\end{proof}
+
+\begin{corollary}
+\label{cor:warmstart}
+When $(y^s, x^s)$ is injected as a MIP start for Stage~$(s{+}1)$, the
+solver receives a feasible incumbent by construction and can begin from a
+known primal bound.
+\end{corollary}
+
+\begin{remark}
+Proposition~\ref{prop:feasibility} does not depend on the LP solution
+structure, the instance size, or the capacity ratio.
+It holds for any multi-stage matheuristic that retains incumbent facilities
+and builds edge sets as in equation~\eqref{eq:stage2_edges}, making the
+feasibility-preserving construction a general design principle for
+Kernel Search algorithms.
+\end{remark}
+
+\paragraph{Practical effect.}
+Stage~1 uses \texttt{MIPFocus=1} (Gurobi's feasibility-first mode) because
+no warm start is yet available.
+Stages~2 and~3 inject the previous incumbent and use \texttt{MIPFocus=0}
+(balanced), because a primal bound is already known.
+This removes the need for later stages to rediscover feasibility after the
+arc set has been narrowed.
+
+The feasibility guarantee is also the structural reason the flat-$k$ funnel
+in the next section is safe to use: because Proposition~\ref{prop:feasibility}
+holds regardless of how narrow the fill set is, the fill size $k$ can be
+reduced aggressively across stages without risking cold restarts.
+
+\subsection{Edge Selection: The \texorpdfstring{Flat-$k$}{Flat-k} Criterion}
+\label{sec:edge_selection}
+
+Section~\ref{sec:proposition} establishes that all incumbent arcs must be
+retained in the next stage's edge set.
+This section specifies the remaining arcs: the reduced-cost fill in
+equation~\eqref{eq:stage2_edges}.
+We use a \emph{client-centric, flat-$k$} criterion: for each client $i$,
+include the $k$ facilities with the lowest reduced cost $\rc{ji}$.
+
+\paragraph{Stage~1 edge set.}
+Stage~1 has no incumbent, so the edge set is a pure reduced-cost selection:
+\begin{equation}
+  \mathcal{E}^{\text{RC}}_{k_1}
+  = \bigcup_{i \in \I}
+    \bigl\{ (j, i) : j \text{ is among the } k_1 \text{ lowest-}\rc{ji}
+    \text{ facilities in } \K \bigr\}.
+  \label{eq:stage1_edges}
+\end{equation}
+We use $k_1 = 50$, giving 50{,}000 edges on a $1{,}000 \times 1{,}000$
+instance and scaling linearly with $|\I|$ regardless of LP behavior.
+Stages~2 and~3 use equation~\eqref{eq:stage2_edges} with $k_2=20$ and
+$k_3=10$: the fill set shrinks while the incumbent arcs are always retained
+by Proposition~\ref{prop:feasibility}.
+
+\begin{proposition}[Guaranteed subproblem size]
+\label{prop:size}
+For any MSCFLP instance, any LP solution, and any $k \geq 1$, the
+Stage~1 edge set satisfies $|\mathcal{E}^{\mathrm{RC}}_{k_1}| = k_1 \cdot |\I|$.
+This bound is exact and holds regardless of LP concentration, capacity
+ratio, or instance scale.
+\end{proposition}
+
+The proof is immediate: exactly $k_1$ arcs are selected per client and
+clients are disjoint.
+The Stage~1 subproblem size is fully controlled through $k_1$ alone.
+
+\paragraph{Why flat-$k$ rather than a threshold $\gamma$?}
+Section~\ref{sec:audit} gives two reasons.
+First, the $\gamma$-threshold provides no guarantee on subproblem size.
+Second, it is structurally biased: bucket facilities have $\alpha^*_j = 0$,
+so their arc reduced costs receive no capacity-dual discount and face a
+higher effective hurdle than kernel-facility arcs under the same $\gamma$.
+The flat-$k$ criterion eliminates both problems: it selects exactly $k$ arcs
+per client and ranks all facilities by the same reduced-cost ordering,
+treating kernel and bucket facilities identically.
+
+\paragraph{Why three stages?}
+The specific values $k_1=50$, $k_2=20$, $k_3=10$ are a practical choice,
+not a theoretically derived optimum.
+What matters is that the sequence is decreasing (so the fill set narrows
+across stages) and that the feasibility guarantee of
+Proposition~\ref{prop:feasibility} holds at each transition regardless of
+how small $k$ becomes.
+A practitioner with more time or memory can raise all three values.
+
+\subsection{Full Algorithm}
+\label{sec:full_algorithm}
+
+Algorithm~\ref{alg:fks} states FKS precisely.
+All parameters not listed in the algorithm follow G\&S~2012 defaults.
+We use $k_1 = 50$, $k_2 = 20$, $k_3 = 10$ and a 300-second time limit per
+stage throughout.
+When a bucket solution improves the incumbent, any opened bucket facility is
+promoted into the kernel before the next stage; this keeps the incumbent's
+facility set available for the feasibility-preserving transition.
+In the pseudocode, $\mathcal{E}^{\text{inc}}_k(x;\mathcal{F})$ denotes the
+same incumbent-preserving flat-$k$ construction as
+equation~\eqref{eq:stage2_edges}, applied over facility set $\mathcal{F}$.
+
+\begin{algorithm}[t]
+\caption{Funnel Kernel Search (FKS)}
+\label{alg:fks}
+\begin{algorithmic}[1]
+\Require Instance $(\J,\I,f,q,d,c)$; stage parameters $(k_s, T_s)_{s=1}^{S}$
+\Ensure Feasible integer solution $(y^H, x^H)$
+
+\State \textbf{LP phase:} Solve LP via column generation
+       $\to (\xLP, \yLP, \bar{c})$; \quad $z^{\text{LP}} \gets$ LP objective
+\State $\K \gets \Jone \cup \Jfrac$
+\State Sort $\Jzero$ by $\rc{y_j}$ ascending $\to$ bucket list $L$
+\State $z^H \gets +\infty$; \quad $x^{\text{prev}} \gets \emptyset$;
+       \quad $y^H \gets \emptyset$
+
+\For{$s = 1, 2, \ldots, S$}
+
+  \State \textbf{Build edge set:}
+  \If{$s = 1$}
+    \State $\mathcal{E} \gets \mathcal{E}^{\text{RC}}_{k_1}$
+           \hfill\Comment{top-$k_1$ by reduced cost per client}
+    \State \texttt{MIPFocus} $\gets 1$
+           \hfill\Comment{find any feasible incumbent quickly}
+  \Else
+    \State $\mathcal{E} \gets \mathcal{E}^{\text{inc}}_{k_s}(x^{\text{prev}})$
+           \hfill\Comment{preserve incumbent arcs, fill to $k_s$}
+    \State \texttt{MIPFocus} $\gets 0$
+           \hfill\Comment{balanced; warm start already feasible}
+  \EndIf
+
+  \State \textbf{Kernel MILP:}
+         $(z, y, x) \gets
+         \text{MILP}(\K,\, \mathcal{E},\, z^H,\, \emptyset,\, T_s,\,
+         \texttt{warm}=(y^H,x^H))$
+  \If{$z < z^H$} \; $z^H, y^H, x^H, x^{\text{prev}} \gets z, y, x, x$
+  \EndIf
+
+  \If{$s > 1$} \hfill\Comment{bucket expansion (stages 2+ only)}
+    \For{$h = 1, \ldots, \bar{N}_B$}
+      \State $B_h \gets$ next $l_{\text{buck}} = |\K|$ facilities from $L$
+      \If{$B_h = \emptyset$} \textbf{break} \EndIf
+      \State $\mathcal{E}' \gets
+             \mathcal{E}^{\text{inc}}_{k_1}(x^H;\,\K \cup B_h)$
+             \hfill\Comment{flat-$k$ bucket coverage plus incumbent arcs}
+      \State $(z, y, x) \gets
+             \text{MILP}(\K \cup B_h,\, \mathcal{E}',\, z^H,\, B_h,\, T_s,\,
+             \texttt{warm}=(y^H,x^H))$
+      \If{$z < z^H$} \;
+        $z^H, y^H, x^H, x^{\text{prev}} \gets z, y, x, x$;
+        $\K \gets \K \cup \{j \in B_h : y_j = 1\}$
+      \EndIf
+    \EndFor
+  \EndIf
+
+\EndFor
+\State \Return $(y^H, x^H)$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Why three stages and these $k$ values?}
+The specific values $k_1=50$, $k_2=20$, $k_3=10$ are a practical choice, not
+a theoretically derived optimum.
+The flat-$k$ design is intentionally parameterized: a practitioner with more
+time or memory can raise all three values; a practitioner with tighter
+constraints can lower them.
+What matters structurally is only that the sequence is decreasing (so the
+subproblem narrows progressively) and that incumbent arcs are preserved at each
+transition (so feasibility is not broken).
+The values used here were chosen to give a broad first-stage coverage on the
+largest benchmark families ($k=50$ gives 100{,}000 arcs on a $1{,}000\times
+2{,}000$ instance) while keeping later stages computationally tractable.
+Because every stage after the first begins from a feasible warm start
+(Proposition~\ref{prop:feasibility}), later stages spend their time
+improving the incumbent rather than rediscovering feasibility.
+
+\paragraph{Relation to G\&S~2012.}
+FKS retains all structural components of G\&S~2012: the same kernel
+definition, the same bucket expansion structure, and the same MILP
+formulation.
+The two changes are: (1)~the LP is solved via CG rather than by constructing the
+full LP upfront, and (2)~the restricted-MILP phase is replaced by a three-stage
+funnel with feasibility-preserving transitions.
+The computational study evaluates these changes separately before reporting the
+combined end-to-end effect.

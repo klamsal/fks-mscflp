@@ -6,7 +6,19 @@ __pycache__/
 # macOS
 .DS_Store
 
-# Validation outputs
+# Local-only project data
+Literature/
 benchmarks/
+
+# FKS paper build outputs
+fks_paper/*.aux
+fks_paper/*.bbl
+fks_paper/*.blg
+fks_paper/*.log
+fks_paper/*.out
+fks_paper/*.spl
+fks_paper/*.synctex.gz
+
+# Runtime outputs
 fks_mscflp/results/
 fks_mscflp/logs/
