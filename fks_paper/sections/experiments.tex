@@ -10,8 +10,7 @@ comparison targets one of the three design aspects in isolation.
 
 \subsection{Experimental Setup}
 
-\paragraph{Instances.}
-We use the large-scale MSCFLP benchmark families introduced by
+The benchmark suite consists of the large-scale MSCFLP families introduced by
 \citet{avella2008effective} and also used by \citet{guastaroba2012kernel},
 covering all three public test beds (A, B, and C) as listed in
 Table~\ref{tab:instance_families}.
@@ -50,8 +49,7 @@ C & p2000-2000 & 2{,}000 & 2{,}000 & 30 & 61--90 \\
 \end{tabular}
 \end{table}
 
-\paragraph{Algorithms compared.}
-We compare four variants, all implemented in Python~3.11 with Gurobi~13.0.2
+Four variants are compared, all implemented in Python~3.11 with Gurobi~13.0.2
 and run on an Apple M3~Pro (12-core CPU, 18~GB RAM), with each instance solved
 in an independent process so that every run has exclusive access to the full
 memory and CPU budget.
@@ -75,38 +73,35 @@ memory and CPU budget.
         Comparing FKS-CG-WS against KS-LP gives the combined end-to-end picture.
 \end{itemize}
 
-\paragraph{Implementation details.}
-KS-LP uses the parameter choices of G\&S~2012: the LP-defined initial kernel,
-bucket size $l_{\text{buck}} = |\K|$, at most three analyzed buckets ($\bar{N}_B = 3$),
-objective cutoffs, and the bucket-forcing constraint.
-FKS uses the same kernel and bucket logic but replaces the single restricted-MILP
-phase with the flat-$k$ funnel described in Section~\ref{sec:algorithm}.
-The restricted-MILP time limit is 300~seconds per subproblem for all variants.
-G\&S~2012 allocated 900~seconds per subproblem~\citep{guastaroba2012kernel}
-(Section~3.2), noting that ``the software often finds quickly an optimal
-or near-optimal solution'' and that the limit exists mainly as a safeguard.
+KS-LP follows the parameter choices of G\&S~2012 throughout: the LP-defined
+initial kernel, bucket size $l_{\text{buck}} = |\K|$, at most three analyzed
+buckets ($\bar{N}_B = 3$), objective cutoffs, and the bucket-forcing constraint.
+FKS-CG-WS retains the same kernel and bucket logic but replaces the
+single restricted-MILP phase with the flat-$k$ funnel described in
+Section~\ref{sec:algorithm}.
+All four variants use a 300-second restricted-MILP time limit per subproblem,
+compared with the 900-second limit in G\&S~2012~\citep{guastaroba2012kernel},
+which the authors note was set mainly as a safeguard since ``the software often
+finds quickly an optimal or near-optimal solution.''
 Modern hardware and Gurobi reduce per-subproblem solve times considerably
 relative to the CPLEX~12.2 environment of G\&S~2012, so 300~seconds proves
-sufficient: our KS-LP recreation matches or slightly exceeds their published
+sufficient: our KS-LP recreation matches or slightly exceeds the published
 aggregate results on p1000-1000 (Section~\ref{sec:literature}).
-Because all four variants share this 300-second limit, all within-study
-comparisons are unaffected by the difference from the original paper.
-Each run records the instance name, test bed, LP solver, stage widths,
-LP time, restricted-MILP time, objective value, and optimality gap.
+Because all four variants share the same limit, within-study comparisons are
+unaffected by the reduction from the original budget.
 
-\paragraph{Metrics.}
-The LP gap is
+The primary quality metric is the LP gap,
 \[
   \text{gap}(\%) = \frac{z^H - z^{\mathrm{LP}}}{z^{\mathrm{LP}}} \times 100,
 \]
 where $z^H$ is the heuristic objective and $z^{\mathrm{LP}}$ is the LP lower
 bound from the same run.
-Because our LP lower bounds can differ slightly from those reported by
-G\&S~2012 due to solver and hardware differences (see Section~\ref{sec:lp_bounds}),
+Because LP lower bounds can differ slightly from those reported by G\&S~2012
+due to solver and hardware differences (see Section~\ref{sec:lp_bounds}),
 we also report integer objectives for direct literature comparisons.
-Win/tie/loss counts use a tolerance of 0.01 cost units.
-Runtime is decomposed into LP time, restricted-MILP time, and total time
-whenever the breakdown is relevant.
+Win/tie/loss counts use a tolerance of 0.01 cost units, and runtime is
+decomposed into LP time, restricted-MILP time, and total time wherever
+the breakdown is informative.
 
 \subsection{Study 1: LP Bottleneck Removal}
 \label{sec:study_lp}
