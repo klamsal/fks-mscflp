@@ -373,6 +373,49 @@ p2000-2000 (19)  & 0.0026\% & 0.0136\% & 0.0012\% & 0.0088\% & 0.0000\% & 0.0007
 \end{tabular}
 \end{table}
 
+Table~\ref{tab:tbb_tbc_gap} extends the quality comparison to Test Bed~B and
+Test Bed~C p2000-2000 instances.
+For Test Bed~B, no proven optimal values are available:
+\citet{caserta2020corridor} exhausted available memory on all 30 p2000-2000
+instances, so the reference values are the best-known upper bounds from that study.
+FKS-CG-WS improves on the published best-known bound for 14 of 30 instances and
+matches the remaining 16 within 0.001\%, never performing worse.
+The best improvement is $-0.147\%$ on instance~53, and the average improvement
+across all 30 instances is $-0.019\%$, establishing 14 new best-known solutions
+for the Test Bed~B p2000-2000 family.
+
+For Test Bed~C, instances~76--90 are proven optimal by \citet{avella2021weakflow};
+FKS-CG-WS matches all 15 exactly within floating-point precision (average gap
+$0.000\%$, average runtime 46~s).
+Instances~61--75 are best-known upper bounds from the same source, obtained with
+a 3{,}600-second time limit; FKS-CG-WS improves on 8 of these 15 and matches
+the remaining 7, contributing 8 additional new best-known solutions.
+Across all 90 p2000-2000 instances (Test Beds A, B, and C), FKS-CG-WS never
+produces a solution worse than the best available reference from the literature.
+
+\begin{table}[htbp]
+\centering
+\caption{FKS-CG-WS versus best available literature reference for Test Bed~B and
+         Test Bed~C p2000-2000.
+         BK = best-known upper bound; OPT = proven optimal.
+         Impr.\ = instances where FKS-CG-WS strictly improves on the reference
+         (gap $< -0.001\%$); Match = within $0.001\%$; Worse = 0 in all rows.
+         Negative average gap indicates FKS-CG-WS finds a lower-cost solution
+         than the published reference.}
+\label{tab:tbb_tbc_gap}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llllrrrrrr}
+\toprule
+TB & Instances & Ref & Source & $N$ & Impr. & Match & Avg gap & Best gap & Avg time (s) \\
+\midrule
+B & 31--60 & BK  & CV2020  & 30 & 14 & 16 & $-0.019\%$ & $-0.147\%$ & 829 \\
+C & 61--75 & BK  & WFC2021 & 15 &  8 &  7 & $-0.003\%$ & $-0.008\%$ & 809 \\
+C & 76--90 & OPT & WFC2021 & 15 &  0 & 15 & $\phantom{-}0.000\%$ & ---        &  46 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Validating the KS-LP Baseline Against Published Results}
 \label{sec:literature}
 
