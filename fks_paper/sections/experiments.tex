@@ -5,8 +5,10 @@ The computational study uses component-wise comparisons to isolate each of the
 three design refinements introduced in Section~\ref{sec:audit}.
 In each comparison, exactly one component differs between the two variants,
 so the contribution of that specific modification is measured without confounding.
-This structure directly mirrors the analysis in Section~\ref{sec:audit}: each
-comparison targets one of the three design aspects in isolation.
+The section is organized as follows: we first examine the LP phase in isolation,
+then the restricted-MILP phase, then end-to-end performance, followed by a
+component-wise breakdown of Fix~2 and Fix~3, and finally a comparison of
+solution quality against proven optima from the literature.
 
 \subsection{Experimental Setup}
 
@@ -103,7 +105,7 @@ Win/tie/loss counts use a tolerance of 0.01 cost units, and runtime is
 decomposed into LP time, restricted-MILP time, and total time wherever
 the breakdown is informative.
 
-\subsection{Study 1: LP Bottleneck Removal}
+\subsection{LP Phase: Column Generation vs.\ Full LP}
 \label{sec:study_lp}
 
 The first study measures how much of the KS setup time is consumed by the LP
@@ -169,7 +171,7 @@ reproduces our full LP lower bound to within $1.3 \times 10^{-5}$ on all
 instances, confirming that column generation supplies the same LP information
 used by the full-LP KS baseline.
 
-\subsection{Study 2: Restricted-MILP Acceleration}
+\subsection{Restricted-MILP Phase: Flat-$k$ Funnel vs.\ KS-CG}
 \label{sec:study_milp}
 
 The second study compares KS-CG and FKS-CG-WS on the restricted-MILP phase.
@@ -230,7 +232,7 @@ C & p1000-1000 & 30 & 125.1 &  71.2 & 1.76$\times$ &  7/22/1 \\
 \end{tabular}
 \end{table}
 
-\subsection{Study 3: End-to-End Performance}
+\subsection{End-to-End Performance}
 \label{sec:study_end_to_end}
 
 Table~\ref{tab:end_to_end} reports end-to-end results across all families.
@@ -286,7 +288,7 @@ C & p1000-1000 & 30 & 185.1 & 125.8 & 71.8 & 2.58$\times$ & 4/25/1 & 7/22/1 \\
 \end{tabular}
 \end{table}
 
-\subsection{Study 4: Component-wise Isolation of Fix~2 and Fix~3}
+\subsection{Component-wise Isolation of Fix~2 and Fix~3}
 \label{sec:study_components}
 
 Studies 1--3 compare FKS-CG-WS against KS-CG, which differs in two ways: it uses
@@ -304,7 +306,7 @@ feasibility-preserving transitions to KS-CG while retaining the $\gamma$-thresho
 
 Results for p1000-4000 Test Bed~A (30 instances) will be reported for this
 ablation because its size and capacity regime produce clear quality differences
-in Study~2.
+in Section~\ref{sec:study_milp}.
 The comparison uses the same instance set, CG LP output, and 300-second
 restricted-MILP limit as the main study.
 We keep this ablation separate from Tables~\ref{tab:kscg_fkscg}
@@ -312,7 +314,7 @@ and~\ref{tab:end_to_end} because it requires the additional KS-CG-WS control
 run; those runs are not mixed into the aggregate tables until the complete
 family is available.
 
-\subsection{Study 5: Comparison Against Proven Optima}
+\subsection{Solution Quality Against Proven Optima and Literature Bounds}
 \label{sec:study_proven_optima}
 
 The final study evaluates solution quality against the best available results
