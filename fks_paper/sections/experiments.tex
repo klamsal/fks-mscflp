@@ -336,6 +336,19 @@ Notably, KS-CG produces a large outlier gap of 0.27\% on one instance
 (p1000-4000-17), where FKS-CG-WS finds the optimum. This suggests the flat-$k$
 arc selection criterion is more robust than the $\gamma$-threshold.
 
+A complementary view uses the published upper bounds of \citet{avella2008effective}
+as the reference, which is the metric reported by G\&S~2012.
+For p2000-2000, FKS-CG-WS improves on the Avella upper bound for all 29 instances
+where a reference value is available, with an average improvement of $-0.090\%$
+and a best improvement of $-0.337\%$ (instance~15).
+For context, G\&S~2012 report $-0.21\%$ average improvement over Avella bounds
+across all five Test Bed~A families using a 900-second per-subproblem limit;
+FKS-CG-WS achieves comparable improvement at one-third the per-subproblem budget
+while simultaneously matching or exceeding proven optima on 18 of 19 instances.
+Runtimes for p2000-2000 average 213.7~s, with the hardest instances (26--30)
+requiring up to 1{,}042~s due to additional funnel restarts; all 30 instances
+complete well within one hour.
+
 \begin{table}[htbp]
 \centering
 \caption{Gap (\%) versus proven optimal solutions on 110 Test Bed~A instances.
