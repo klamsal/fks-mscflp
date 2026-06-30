@@ -11,13 +11,13 @@ comparison targets one of the three design aspects in isolation.
 \subsection{Experimental Setup}
 
 \paragraph{Instances.}
-We use the large-scale MSCFLP benchmark families of
-\citet{avella2008effective}, also used by \citet{guastaroba2012kernel}.
-The main study covers the public Test Bed~A and Test Bed~C families listed in
+We use the large-scale MSCFLP benchmark families introduced by
+\citet{avella2008effective} and also used by \citet{guastaroba2012kernel},
+covering all three public test beds (A, B, and C) as listed in
 Table~\ref{tab:instance_families}.
-Test Bed~A and Test Bed~C share the same five facility-client scales but use
-independently drawn instances, providing a robustness check across instance
-variation within each scale.
+All three test beds share the same five facility-client scales with independently
+drawn instances, providing a robustness check across instance variation
+within each scale.
 
 \begin{table}[htbp]
 \centering
@@ -91,8 +91,8 @@ sufficient: our KS-LP recreation matches or slightly exceeds their published
 aggregate results on p1000-1000 (Section~\ref{sec:literature}).
 Because all four variants share this 300-second limit, all within-study
 comparisons are unaffected by the difference from the original paper.
-Runs are recorded with instance name, test bed, LP solver, stage widths,
-LP time, restricted-MILP time, objective value, and gap.
+Each run records the instance name, test bed, LP solver, stage widths,
+LP time, restricted-MILP time, objective value, and optimality gap.
 
 \paragraph{Metrics.}
 The LP gap is
