@@ -346,6 +346,15 @@ Notably, KS-CG produces a large outlier gap of 0.27\% on one instance
 (p1000-4000-17), where FKS-CG-WS finds the optimum. This suggests the flat-$k$
 arc selection criterion is more robust than the $\gamma$-threshold.
 
+To put the quality result in context, \citet{fischetti2016benders} applied
+a modern Benders decomposition embedded in a branch-and-cut solver to the same
+benchmark, proving optimality for 97 of 150 Test Bed~A instances within a
+50{,}000-second time limit.
+FKS-CG-WS finds the proven optimal solution on 109 of the 110 instances
+with known optima --- effectively matching the solution quality of the best
+available exact method --- while using a 300-second per-subproblem budget,
+roughly two orders of magnitude less compute per instance.
+
 A complementary view uses the published upper bounds of \citet{avella2008effective}
 as the reference, which is the metric reported by G\&S~2012.
 For p2000-2000, FKS-CG-WS improves on the Avella upper bound for all 29 instances
