@@ -332,7 +332,7 @@ def fig_edge_comparison():
 
     for fam in FAMILIES:
         # KS edges: not stored directly in run_testbed.py CSVs.
-        # Use the known analytic values from G&K 2012 (γ-threshold produces
+        # Use the known analytic values from G&S 2012 (γ-threshold produces
         # O(n_cli × n_fac / density) edges; we read from compare CSVs if available).
         pass
 

@@ -13,7 +13,7 @@ reproduces the full LP objective to machine precision on every instance).
 Objective values and $z^{\mathrm{LP}}$ allow the reader to verify the reported
 gap directly as $(z^H - z^{\mathrm{LP}})/z^{\mathrm{LP}} \times 100$.
 Time is total wall-clock seconds (LP + restricted-MILP).
-A bold FKS-CG objective indicates a strictly better solution than KS-LP.
+A bold FKS-CG-WS objective indicates a strictly better solution than KS-LP.
 
 \begin{table}[htbp]
 \centering
@@ -21,13 +21,13 @@ A bold FKS-CG objective indicates a strictly better solution than KS-LP.
          $z^{\mathrm{LP}}$: LP lower bound (identical for all three variants).
          Objective columns report integer objective values;
          time columns report total wall-clock seconds (LP + MILP).
-         Bold FKS-CG objective indicates a strictly better solution than KS-LP.}
+         Bold FKS-CG-WS objective indicates a strictly better solution than KS-LP.}
 \label{tab:app_tba_1000_1000}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{lrrrrrrr}
 \toprule
- & & \multicolumn{2}{c}{KS-LP} & \multicolumn{2}{c}{KS-CG} & \multicolumn{2}{c}{FKS-CG} \\
+ & & \multicolumn{2}{c}{KS-LP} & \multicolumn{2}{c}{KS-CG} & \multicolumn{2}{c}{FKS-CG-WS} \\
 \cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
 Instance & $z^{\mathrm{LP}}$ & Obj. & Time & Obj. & Time & Obj. & Time \\
 \midrule
@@ -73,7 +73,7 @@ Average       &              &              & 137.9 &              &  81.8 &    
          $z^{\mathrm{LP}}$: LP lower bound (identical for all three variants).
          Objective columns report integer objective values;
          time columns report total wall-clock seconds (LP + MILP).
-         Bold FKS-CG objective indicates a strictly better solution than KS-LP.
+         Bold FKS-CG-WS objective indicates a strictly better solution than KS-LP.
          Instances~1--15 are tight-capacity ($r \leq 2$);
          instances~16--30 are loose-capacity ($r \geq 3$).}
 \label{tab:app_tba_800_4400}
@@ -81,7 +81,7 @@ Average       &              &              & 137.9 &              &  81.8 &    
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{lrrrrrrr}
 \toprule
- & & \multicolumn{2}{c}{KS-LP} & \multicolumn{2}{c}{KS-CG} & \multicolumn{2}{c}{FKS-CG} \\
+ & & \multicolumn{2}{c}{KS-LP} & \multicolumn{2}{c}{KS-CG} & \multicolumn{2}{c}{FKS-CG-WS} \\
 \cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
 Instance & $z^{\mathrm{LP}}$ & Obj. & Time & Obj. & Time & Obj. & Time \\
 \midrule

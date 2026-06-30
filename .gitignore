@@ -3,6 +3,10 @@ __pycache__/
 *.pyc
 .venv/
 
+# Local environment (machine-specific paths and license)
+.env
+.env.local
+
 # macOS
 .DS_Store
 

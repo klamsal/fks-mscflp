@@ -16,7 +16,7 @@ Use these names consistently in scripts, experiments, tables, and paper text.
 
 Use the following component-wise ladder:
 
-1. `ks-full` -> baseline G&K-style KS with full LP.
+1. `ks-full` -> baseline G&S-style KS with full LP.
 2. `ks-cg` -> adds CG LP (Fix 1).
 3. `ks-cg-ws` -> adds feasibility-preserving stage transitions / warm starts (Fix 3).
 4. `fks-cg-ws` -> full method with flat-k funnel + WS (Fix 2 on top of Fix 1 + Fix 3).

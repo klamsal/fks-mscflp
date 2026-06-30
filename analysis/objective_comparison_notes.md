@@ -43,7 +43,7 @@ G&S data: Table 17, p913–914 of G&S 2012
 |-----------|-----------------|-----------|------------------|
 | KS-full   | −0.0426%        | +0.0004%  | 27 / 0 / 3       |
 | KS-CG     | −0.0412%        | +0.0004%  | 27 / 0 / 3       |
-| FKS-CG    | −0.0428%        | +0.0004%  | 27 / 0 / 3       |
+| FKS-CG-WS | −0.0428%        | +0.0004%  | 27 / 0 / 3       |
 
 By ratio (KS-full):
 | r    | Avg diff% | Note |
@@ -128,6 +128,24 @@ for larger families (p1200-3000, p2000-2000) where G&S genuinely struggles.
 
 ---
 
+---
+
+## Gap vs proven optimal / best known — TB-C results
+
+Source of proven optima and best known upper bounds: Avella, Boccia, Mattia, Rossi (2021),
+"Weak flow cover inequalities for the capacitated facility location problem" (EJOR 289:485-494).
+This paper provides the state-of-the-art results for the difficult Test Bed C instances.
+
+**Coverage:**
+- For instances with tight capacity ratios (r=1.1, 1.5, 2.0), the paper provides the
+  best known upper bounds, as their exact method hit the time limit.
+- For instances with looser capacity ratios (r=3.0, 5.0, 10.0), the paper provides
+  new proven optimal solutions.
+
+The data is codified in `analysis/known_optima_tbc.py`.
+
+---
+
 ## Gap vs proven optimal — TB-A results
 
 Source of proven optima: Sampathkumar (2019), "A General Corridor Method-Based Approach
@@ -146,7 +164,7 @@ larger families. These are the hardest instances for exact methods.
 
 **Gap% = 100*(our_obj - z*) / z*  (0% = found proven optimum)**
 
-| Family | KS-full avg | KS-full max | KS-CG avg | KS-CG max | FKS-CG avg | FKS-CG max |
+| Family | KS-full avg | KS-full max | KS-CG avg | KS-CG max | FKS-CG-WS avg | FKS-CG-WS max |
 |---|---|---|---|---|---|---|
 | p1000-1000 (30) | 0.0018% | 0.0373% | 0.0001% | 0.0025% | 0.0000% | 0.0003% |
 | p800-4400  (21) | 0.0021% | 0.0246% | 0.0010% | 0.0055% | 0.0000% | 0.0000% |
@@ -155,11 +173,11 @@ larger families. These are the hardest instances for exact methods.
 | p2000-2000 (19) | 0.0026% | 0.0136% | 0.0012% | 0.0088% | 0.0000% | 0.0007% |
 | **Overall (110)** | **0.0024%** | **0.0373%** | **0.0047%** | **0.2726%** | **0.0000%** | **0.0007%** |
 
-**FKS-CG finds the proven optimal solution on 109/110 instances (the one miss is
+**FKS-CG-WS finds the proven optimal solution on 109/110 instances (the one miss is
 p2000-2000, gap 0.0007% — within 1 unit of objective value).**
 
 Notable: KS-CG has one outlier — p1000-4000-17 at 0.2726% gap (obj=116,619 vs z*=116,302).
-This is the same instance where FKS-CG recovers the optimum, suggesting the flat-k
+This is the same instance where FKS-CG-WS recovers the optimum, suggesting the flat-k
 arc selection in FKS is more robust for this type of instance.
 
 ## Scripts

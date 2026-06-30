@@ -1,6 +1,6 @@
 """fks.py — Funnel Kernel Search (FKS) for the MSCFLP.
 
-FKS is a multi-stage matheuristic that extends Kernel Search (G&K 2012) with
+FKS is a multi-stage matheuristic that extends Kernel Search (G&S 2012) with
 a client-centric edge selection criterion and inter-stage warm starting.
 
 Edge selection — two modes (auto-detected from stage multiplier):
@@ -24,7 +24,7 @@ Default stages (flat-k):
   Stage 2  k=20, 300s — narrower + incumbent warm start
   Stage 3  k=10, 300s — tightest  + incumbent warm start
 
-Bucket expansion (stages 2+, identical structure to G&K 2012):
+Bucket expansion (stages 2+, identical structure to G&S 2012):
   LP-closed facilities are tested in batches.  For flat-k mode the Stage-1 k
   is reused so bucket facilities have a fair chance of entering the edge set.
 """

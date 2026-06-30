@@ -26,9 +26,9 @@ Benefits:
 
 ## Algorithm positioning: FKS as a variation of Kernel Search
 
-FKS is not a new paradigm — it is a principled critique-and-repair of G&K (2012) Kernel Search. The paper's contribution is:
+FKS is not a new paradigm — it is a principled critique-and-repair of G&S (2012) Kernel Search. The paper's contribution is:
 
-1. Identifying specific design flaws in G&K's KS (γ-threshold J0 bias, no warm start, drop criterion flaw, bucket ordering by opening cost alone)
+1. Identifying specific design flaws in G&S's KS (γ-threshold J0 bias, no warm start, drop criterion flaw, bucket ordering by opening cost alone)
 2. Proposing targeted fixes (top-k per client, warm start every MILP, multi-stage funnel)
 3. Providing a ladder of experiments that proves each fix contributes independently
 

@@ -6,8 +6,8 @@ Usage:
     python solve.py --testbed=a --family=1000-1000 --idx=1 --mode=ks-cg --milp-time=300
 
 Modes:
-    ks-full   Full LP  + G&K 2012 Kernel Search
-    ks-cg     CG LP   + G&K 2012 Kernel Search
+    ks-full   Full LP  + G&S 2012 Kernel Search
+    ks-cg     CG LP   + G&S 2012 Kernel Search
     ks-cg-ws  CG LP   + KS with feasibility-preserving stage transitions
     fks-cg-ws CG LP   + Funnel KS (k=50→20→10, warm starts)
 
@@ -69,7 +69,7 @@ FIELDNAMES = [
     "cg_iters", "cg_active_cols",
     # solution
     "obj", "gap_lp_pct", "gap_lp_h_pct",
-    # vs G&K 2012 published upper bound
+    # vs G&S 2012 published upper bound
     "zub_gk", "impr_gk_pct",
     # MILP totals
     "n_milps", "milp_time", "total_time",

@@ -26,7 +26,7 @@ def load_csv(family_tag, mode):
                  'total_time': f'time_{mode}'})
 
 
-def build_comparison(family_tag, modes=('ks-full', 'ks-cg', 'fks-cg')):
+def build_comparison(family_tag, modes=('ks-full', 'ks-cg', 'fks-cg-ws')):
     # Collect our results
     merged = None
     for mode in modes:
@@ -71,7 +71,7 @@ def build_comparison(family_tag, modes=('ks-full', 'ks-cg', 'fks-cg')):
     return merged
 
 
-def print_summary(family_tag, modes=('ks-full', 'ks-cg', 'fks-cg')):
+def print_summary(family_tag, modes=('ks-full', 'ks-cg', 'fks-cg-ws')):
     df = build_comparison(family_tag, modes)
     if df is None:
         print(f'  No results for {family_tag}')
@@ -124,7 +124,7 @@ def run_all():
 
     # Overall summary
     print('\n=== OVERALL TB-A SUMMARY ===')
-    for mode in ('ks-full', 'ks-cg', 'fks-cg'):
+    for mode in ('ks-full', 'ks-cg', 'fks-cg-ws'):
         gaps = []
         for df in all_dfs.values():
             col = f'gap_opt_{mode}'

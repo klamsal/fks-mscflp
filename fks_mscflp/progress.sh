@@ -21,7 +21,7 @@ print_table() {
     printf "\n%-14s  %-12s  %9s  %9s  %9s  %9s\n" "family" "testbed" "ks-full" "ks-cg" "ks-cg-ws" "fks-cg-ws"
     printf "%-14s  %-12s  %9s  %9s  %9s  %9s\n" "--------------" "--------" "---------" "---------" "---------" "---------"
 
-    for TB in a b; do
+    for TB in a b c; do
         for FAM in $FAMILIES; do
             EXP=$(expected "$TB" "$FAM")
             row_str="$(printf "%-14s  tb%s" "$FAM" "$TB")"

@@ -12,7 +12,7 @@ MILP (Proposition 2), making it a valid warm start by construction.
 Arc selection (γ-threshold) is unchanged from KS — Fix 2 is NOT applied.
 This allows the component-wise comparison:
   KS-CG  vs  KS-CG-WS  →  measures Fix 3 alone
-  KS-CG-WS  vs  FKS-CG  →  measures Fix 2 alone
+  KS-CG-WS  vs  FKS-CG-WS  →  measures Fix 2 alone
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from ks import KsResult, _kernel_edges, _bucket_edges
 from fks import _solve_milp
 
 
-def _incumbent_arcs(best_x: Dict[Edge, float], threshold: float = 0.5) -> Set[Edge]:
+def _incumbent_arcs(best_x: Dict[Edge, float], threshold: float = 1e-9) -> Set[Edge]:
     """Return the set of arcs used by the current incumbent."""
     return {e for e, v in best_x.items() if v > threshold}
 
@@ -68,6 +68,17 @@ def run_ks_ws(
     initial_kernel_size = len(kernel)
     absent: Dict[Facility, int] = {j: 0 for j in kernel}
 
+    def _incumbent_facilities() -> Set[Facility]:
+        """Facilities opened by the current incumbent."""
+        return {j for j, v in best_y.items() if v > 0.5}
+
+    def _ensure_incumbent_facilities() -> None:
+        """Keep incumbent-open facilities available in the next restricted MILP."""
+        for j in _incumbent_facilities():
+            if j not in kernel:
+                kernel.append(j)
+            absent[j] = 0
+
     def _augment(arc_set: Set[Edge]) -> Set[Edge]:
         """Add all incumbent arcs to arc_set (Fix 3: feasibility-preserving)."""
         if best_x:
@@ -78,6 +89,7 @@ def run_ks_ws(
         nonlocal kernel, edges, best_obj, best_y, best_x, n_milps, absent, n_buckets_used
 
         # Kernel MILP — augment arc set with incumbent arcs, then warm start
+        _ensure_incumbent_facilities()
         kernel_edges = _augment(edges)
         _, obj, y_sol, x_sol = _solve_milp(
             inst, set(kernel), kernel_edges,
@@ -94,6 +106,7 @@ def run_ks_ws(
         last_improving = -1
         for h, bucket in enumerate(buckets[:nb_bar]):
             # Build γ-threshold bucket arc set, then augment with incumbent arcs
+            _ensure_incumbent_facilities()
             b_edges = _bucket_edges(lp, bucket, edges, gamma)
             b_edges = _augment(b_edges)
 
@@ -119,7 +132,11 @@ def run_ks_ws(
             if y_sol:
                 for j in list(kernel):
                     absent[j] = 0 if y_sol.get(j, 0) > 0.5 else absent.get(j, 0) + 1
-                to_drop = {j for j in kernel if absent.get(j, 0) >= p_remove}
+                incumbent_facs = _incumbent_facilities()
+                to_drop = {
+                    j for j in kernel
+                    if absent.get(j, 0) >= p_remove and j not in incumbent_facs
+                }
                 if to_drop:
                     kernel = [j for j in kernel if j not in to_drop]
                     edges  = {e for e in edges if e[0] not in to_drop}

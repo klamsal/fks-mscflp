@@ -22,11 +22,27 @@ IDX_END=${6:-30}
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [[ -f "$REPO_ROOT/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$REPO_ROOT/.env"
+    set +a
+fi
+
+if [[ -z "$PYTHON_BIN" ]]; then
+    if [[ -x "$REPO_ROOT/.venv/bin/python" ]]; then
+        PYTHON_BIN="$REPO_ROOT/.venv/bin/python"
+    else
+        PYTHON_BIN="python"
+    fi
+fi
+
 echo "=== run_batch  testbed=$TESTBED  family=$FAMILY  mode=$MODE  milp_time=${MILP_TIME}s  idx=${IDX_START}..${IDX_END} ==="
 echo "    started: $(date)"
 
 for i in $(seq "$IDX_START" "$IDX_END"); do
-    python solve.py \
+    "$PYTHON_BIN" solve.py \
         --testbed="$TESTBED" \
         --family="$FAMILY" \
         --idx="$i" \

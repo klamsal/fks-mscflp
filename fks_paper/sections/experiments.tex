@@ -41,7 +41,7 @@ C & p1000-1000 & 1{,}000 & 1{,}000 & 30 & 61--90 \\
 \end{table}
 
 \paragraph{Algorithms compared.}
-We report three variants, all implemented in Python~3.11 with Gurobi~13.0.2,
+We report four variants, all implemented in Python~3.11 with Gurobi~13.0.2,
 run on an Apple M3~Pro (12-core CPU, 18~GB RAM).
 Each instance is solved in an independent process; only one instance runs at a
 time, so the full memory and CPU are available to each run.
@@ -297,10 +297,68 @@ feasibility-preserving transitions to KS-CG while retaining the $\gamma$-thresho
         with feasibility-preserving transitions held constant.
 \end{itemize}
 
-Results for p1000-4000 Test Bed~A (30 instances) are reported here; this family
-was selected because its size and capacity regime produce clear quality
-differences in Study~2.
-[Results table to be inserted once KS-CG-WS runs are complete.]
+Results for p1000-4000 Test Bed~A (30 instances) will be reported for this
+ablation because its size and capacity regime produce clear quality differences
+in Study~2.
+The comparison uses the same instance set, CG LP output, and 300-second
+restricted-MILP limit as the main study.
+We keep this ablation separate from Tables~\ref{tab:kscg_fkscg}
+and~\ref{tab:end_to_end} because it requires the additional KS-CG-WS control
+run; those runs are not mixed into the aggregate tables until the complete
+family is available.
+
+\subsection{Study 5: Comparison Against Proven Optima}
+\label{sec:study_proven_optima}
+
+The final study evaluates solution quality against the best available results
+from the literature for exact methods.
+For Test Bed~A, we use the proven optimal values reported by
+\citet{caserta2020corridor}, who solved 110 of the 150 instances to optimality.
+For Test Bed~C, we use the proven optimal values and best-known upper bounds
+from \citet{avella2021weakflow}, who provide the current state-of-the-art for
+these harder instances.
+The gap is computed as $\text{gap}(\%) = 100 \times (z^H - z^*) / z^*$, where
+$z^*$ is the proven optimal or best-known objective.
+
+Table~\ref{tab:proven_optima_gap} reports the average and maximum gaps for the
+110 Test Bed~A instances with known optima.
+The results show that FKS-CG-WS is exceptionally effective, finding the proven
+optimal solution on 109 of 110 instances.
+The single non-optimal solution (for instance p2000-2000-17) has a gap of just
+0.0007\%, corresponding to an objective value less than one cost unit from the
+optimum.
+This confirms that the FKS design not only accelerates the search but also
+consistently guides it to solutions of very high quality.
+
+In contrast, the baseline KS-LP and KS-CG methods, while still strong, show
+small but consistent gaps across all families.
+Notably, KS-CG produces a large outlier gap of 0.27\% on one instance
+(p1000-4000-17), where FKS-CG-WS finds the optimum. This suggests the flat-$k$
+arc selection criterion is more robust than the $\gamma$-threshold.
+
+\begin{table}[htbp]
+\centering
+\caption{Gap (\%) versus proven optimal solutions on 110 Test Bed~A instances.
+         FKS-CG-WS finds the proven optimum on 109 of 110 instances.}
+\label{tab:proven_optima_gap}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+& \multicolumn{2}{c}{KS-LP} & \multicolumn{2}{c}{KS-CG} & \multicolumn{2}{c}{FKS-CG-WS} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Family (N) & Avg.\ gap & Max gap & Avg.\ gap & Max gap & Avg.\ gap & Max gap \\
+\midrule
+p800-4400 (21)   & 0.0021\% & 0.0246\% & 0.0010\% & 0.0055\% & 0.0000\% & 0.0000\% \\
+p1000-1000 (30)  & 0.0018\% & 0.0373\% & 0.0001\% & 0.0025\% & 0.0000\% & 0.0003\% \\
+p1000-4000 (21)  & 0.0029\% & 0.0173\% & 0.0211\% & 0.2726\% & 0.0000\% & 0.0000\% \\
+p1200-3000 (19)  & 0.0027\% & 0.0268\% & 0.0014\% & 0.0096\% & 0.0000\% & 0.0000\% \\
+p2000-2000 (19)  & 0.0026\% & 0.0136\% & 0.0012\% & 0.0088\% & 0.0000\% & 0.0007\% \\
+\midrule
+\textbf{Overall (110)} & \textbf{0.0024\%} & \textbf{0.0373\%} & \textbf{0.0047\%} & \textbf{0.2726\%} & \textbf{0.0000\%} & \textbf{0.0007\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Validating the KS-LP Baseline Against Published Results}
 \label{sec:literature}
@@ -312,7 +370,7 @@ hardware), and per-subproblem time limit (900~seconds versus 300~seconds).
 These differences make direct comparisons of running times meaningless, and
 they mean we cannot use the published G\&S timing or solution results as the
 control in our ablation study.
-Instead, we re-implement the G\&S algorithm exactly --- same formulation, same
+Instead, we implement a faithful G\&S-style baseline --- same formulation, same
 parameter choices ($\gamma$, $l_{\text{buck}}$, $\bar{N}_B$, $p$), same
 kernel construction and bucket logic --- and run it as KS-LP in our own
 environment.

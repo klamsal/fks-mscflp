@@ -57,7 +57,7 @@ def run():
 
     # Detect families present
     families = ref['Dimensions'].str.replace('x', '-').unique()
-    modes    = ['ks-full', 'ks-cg', 'fks-cg']
+    modes    = ['ks-full', 'ks-cg', 'fks-cg-ws']
 
     # Load all our results
     our_all = None

@@ -63,7 +63,7 @@ def reconstruct_gs_tba(data):
     return pd.DataFrame(rows)
 
 
-def compare_tbc(family_tag, gs_data, modes=('ks-full', 'ks-cg', 'fks-cg')):
+def compare_tbc(family_tag, gs_data, modes=('ks-full', 'ks-cg', 'fks-cg-ws')):
     gs = reconstruct_gs_tbc(gs_data)
 
     # Load our results
@@ -89,7 +89,7 @@ def compare_tbc(family_tag, gs_data, modes=('ks-full', 'ks-cg', 'fks-cg')):
     return merged
 
 
-def summary_tbc(family_tag, gs_data, modes=('ks-full', 'ks-cg', 'fks-cg')):
+def summary_tbc(family_tag, gs_data, modes=('ks-full', 'ks-cg', 'fks-cg-ws')):
     df = compare_tbc(family_tag, gs_data, modes)
     if df is None:
         return

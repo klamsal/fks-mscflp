@@ -27,8 +27,8 @@ G\&S~2012 then proceeds as follows:
   \item \textbf{Kernel MILP.}
     Solve MILP restricted to facilities in kernel $\K$ and edges
     $\mathcal{E} = \{(j,i) : j \in \K,\; \rc{ji} \leq \gamma\}$,
-    where $\gamma = \text{mean}\{\rc{ji} : \xLP_{ji} > 0\}$ is the mean
-    reduced cost over LP-active arcs.
+    where $\gamma = \text{mean}\{\rc{ji} : j \in \K,\; \rc{ji} > 0\}$ is the
+    single global mean of the positive reduced costs over all kernel arcs.
     An objective cutoff $z^H$ is imposed.
   \item \textbf{Bucket expansion.}
     Sort $\Jzero$ by $\rc{y_j}$ ascending.
@@ -69,8 +69,8 @@ the first MILP is even solved.
 
 \paragraph{$\gamma$-threshold arc selection: size and bias.}
 G\&S~2012 includes arc $(j,i)$ in a restricted MILP whenever its reduced cost
-satisfies $\rc{ji} \leq \gamma$, where $\gamma$ is the mean reduced cost over
-LP-active arcs.
+satisfies $\rc{ji} \leq \gamma$, where $\gamma$ is a single global scalar ---
+the mean of the positive reduced costs over all kernel arcs.
 Two concerns follow.
 First, the number of arcs admitted by $\gamma$ depends on LP concentration and
 can vary widely across instances and capacity regimes, giving unpredictable
