@@ -51,10 +51,10 @@ C & p2000-2000 & 2{,}000 & 2{,}000 & 30 & 61--90 \\
 \end{table}
 
 \paragraph{Algorithms compared.}
-We report four variants, all implemented in Python~3.11 with Gurobi~13.0.2,
-run on an Apple M3~Pro (12-core CPU, 18~GB RAM).
-Each instance is solved in an independent process; only one instance runs at a
-time, so the full memory and CPU are available to each run.
+We compare four variants, all implemented in Python~3.11 with Gurobi~13.0.2
+and run on an Apple M3~Pro (12-core CPU, 18~GB RAM), with each instance solved
+in an independent process so that every run has exclusive access to the full
+memory and CPU budget.
 \begin{itemize}
   \item \textbf{KS-LP}: our re-implementation of G\&S~2012 using the full LP
         relaxation (Gurobi simplex).
